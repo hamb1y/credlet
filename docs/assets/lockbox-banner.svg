@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">Lockbox</title>
+  <desc id="desc">Your vault. Your server. Your devices.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#122c36"/></linearGradient>
+    <linearGradient id="accent" x2="1" y2="1"><stop stop-color="#5eead4"/><stop offset="1" stop-color="#14b8a6"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#5eead4" stroke-opacity=".06"/></pattern>
+  </defs>
+  <rect width="1200" height="340" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="340" rx="24" fill="url(#grid)"/>
+  <circle cx="1060" cy="85" r="170" fill="#14b8a6" opacity=".05"/>
+  <circle cx="1120" cy="250" r="240" fill="none" stroke="#5eead4" stroke-opacity=".1"/>
+  <g transform="translate(80 87)">
+    <rect width="166" height="166" rx="38" fill="url(#accent)"/>
+    <path d="M52 75V58a31 31 0 0 1 62 0v17" fill="none" stroke="#0b252c" stroke-width="11" stroke-linecap="round"/>
+    <rect x="39" y="70" width="88" height="66" rx="15" fill="#0b252c"/>
+    <circle cx="83" cy="99" r="8" fill="#5eead4"/>
+    <path d="M83 102v13" stroke="#5eead4" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <text x="292" y="162" fill="#f0fdfa" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="70" font-weight="700" letter-spacing="-3">Lockbox</text>
+  <text x="296" y="210" fill="#b6cbd0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26">Your vault. Your server. Your devices.</text>
+  <text x="296" y="254" fill="#5eead4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="600" letter-spacing="3">SELF-HOSTED · ENCRYPTED SYNC · OPEN SOURCE</text>
+</svg>

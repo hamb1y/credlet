@@ -1,0 +1,80 @@
+[
+  {
+    "NAME": "qemu-common",
+    "VERSION": "11.1.2-1",
+    "FILENAME": "qemu-common-11.1.2-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "bd78128c06b0686b360fee1d46af3bd4f7e19a346323191aed1fd6c78a296183"
+  },
+  {
+    "NAME": "qemu-img",
+    "VERSION": "11.1.2-1",
+    "FILENAME": "qemu-img-11.1.2-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "666dfe6cda552f09091c1cc03fd1143293bd25f47eee4745053efa170fc32e5c"
+  },
+  {
+    "NAME": "qemu-system-x86",
+    "VERSION": "11.1.2-1",
+    "FILENAME": "qemu-system-x86-11.1.2-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "4207178fd53c7cb134d2d11639b873fdd3f8cc5d06aec67816d842a549752a1e"
+  },
+  {
+    "NAME": "qemu-system-x86-firmware",
+    "VERSION": "11.1.2-1",
+    "FILENAME": "qemu-system-x86-firmware-11.1.2-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "556b9a55f94da79b64972340396f7d631ddc3b0feed53d3a5773cb0aa5652ccf"
+  },
+  {
+    "NAME": "seabios",
+    "VERSION": "1.17.0-2",
+    "FILENAME": "seabios-1.17.0-2-any.pkg.tar.zst",
+    "SHA256SUM": "edf543abcff088f94779fa1ec81096867fe5bff06b835da8e45c9c5b0e4d5269"
+  },
+  {
+    "NAME": "capstone",
+    "VERSION": "5.0.9-1",
+    "FILENAME": "capstone-5.0.9-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "76fc16318206289010c1be7977c94d3ee0b48408d5fe3e558c05615a703aa1f5"
+  },
+  {
+    "NAME": "dtc",
+    "VERSION": "1:1.8.1-1",
+    "FILENAME": "dtc-1:1.8.1-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "c377d325b42c4250102615e779cdeb67816a176cd0c55c018f7c81920057eb43"
+  },
+  {
+    "NAME": "libcbor",
+    "VERSION": "0.14.0-1",
+    "FILENAME": "libcbor-0.14.0-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "c6178320776e798dbd9d558cd5891ab2462a10c96c3dbc2dd3624c86ee59cc7e"
+  },
+  {
+    "NAME": "libslirp",
+    "VERSION": "4.9.5-1",
+    "FILENAME": "libslirp-4.9.5-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "d9584c21e1556ae02650ccbd769e838d7aec286b0b092e6b43aac10e3bade240"
+  },
+  {
+    "NAME": "libxdp",
+    "VERSION": "1.6.3-2",
+    "FILENAME": "libxdp-1.6.3-2-x86_64.pkg.tar.zst",
+    "SHA256SUM": "4146de33b9b12531064de40cb671537407c2267e4304159f407be92f2c8758a4"
+  },
+  {
+    "NAME": "ndctl",
+    "VERSION": "85-1",
+    "FILENAME": "ndctl-85-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "8473584f486f93fecefd62240ef1e83194e562c9ff899c1491036edae9e41443"
+  },
+  {
+    "NAME": "rdma-core",
+    "VERSION": "65.0-1",
+    "FILENAME": "rdma-core-65.0-1-x86_64.pkg.tar.zst",
+    "SHA256SUM": "a7a0648650811fd753ded1003acd83871bc31a4eb998bc4d04cf050ed02a238b"
+  },
+  {
+    "NAME": "vde2",
+    "VERSION": "2.3.3-10",
+    "FILENAME": "vde2-2.3.3-10-x86_64.pkg.tar.zst",
+    "SHA256SUM": "deb9c99fc2334c9410ccf7ac8af68ffb1846df9eb6c02f523c15403052ef1f37"
+  }
+]

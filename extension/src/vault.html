@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lockbox</title><link rel="stylesheet" href="vault.css"></head>
+<body>
+<header><span class="mark" aria-hidden="true">L</span><div><h1>Lockbox</h1><p>Your private vault</p></div><button id="lock" hidden>Lock</button></header>
+<main>
+<p id="notice" role="status" aria-live="polite"></p>
+<form id="signin">
+<h2>Connect to your vault</h2>
+<label>Server address<input id="server" type="url" placeholder="https://vault.example.com" required autocomplete="url"></label>
+<label>Email<input id="email" type="email" required autocomplete="username"></label>
+<label>Master password<input id="master" type="password" required autocomplete="current-password"></label>
+<label>Vault login code <span>(if enabled)</span><input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12"></label>
+<button class="primary" type="submit">Unlock vault</button>
+<p class="muted">Use the account created on your own server. The vault locks after five minutes or when its background process closes.</p>
+</form>
+<section id="vault" hidden>
+<div class="toolbar"><h2>Logins</h2><button id="sync">Sync</button><button id="add">Add login</button></div>
+<label class="search">Search<input id="search" type="search" placeholder="Name or username" autocomplete="off"></label>
+<p class="muted" id="page"></p>
+<ul id="items"></ul>
+</section>
+<section id="detail" hidden>
+<div class="row"><button id="back">← Logins</button><button id="edit">Edit</button><button id="delete">Trash</button></div><h2 id="detail-name"></h2>
+<label>Username<input id="detail-username" readonly></label>
+<label>Password<div class="row"><input id="detail-password" type="password" readonly><button id="reveal">Show</button></div></label>
+<div id="otp-panel" hidden><label>Authenticator code<output id="otp"></output></label><p class="muted" id="otp-time"></p><button id="fill-code">Fill code</button></div>
+<p id="detail-uri" class="muted"></p><button id="fill" class="primary">Fill current page</button>
+<p class="muted">Fills the matching HTTPS page after you choose a login. You submit the form.</p>
+</section>
+<section id="trash-confirm" hidden>
+<h2>Move login to trash?</h2><p id="trash-name"></p>
+<p class="muted">You can restore it from Trash in your web vault.</p>
+<div class="row"><button id="trash-cancel">Keep login</button><button id="trash-submit">Move to trash</button></div>
+</section>
+<form id="approval" hidden>
+<h2 id="approval-title">Use a passkey</h2>
+<p>Request from <strong id="approval-origin"></strong></p>
+<p class="muted">Passkey site: <span id="approval-rp"></span></p>
+<p id="approval-user"></p>
+<label id="approval-choice-label">Account<select id="approval-choice"></select></label>
+<label>Verify master password<input id="approval-password" type="password" required autocomplete="current-password"></label>
+<button id="approve" type="submit" class="primary">Approve</button>
+<div class="row"><button id="approval-cancel" type="button">Cancel</button><button id="approval-device" type="button">Use device instead</button></div>
+<p class="muted">Approve only if you started this request on this site.</p>
+</form>
+<form id="editor" hidden>
+<button id="cancel" type="button">← Logins</button><h2 id="editor-title">Save a login</h2>
+<label>Name<input id="name" required maxlength="200"></label>
+<label>Website<input id="uri" type="url" placeholder="https://example.com" required></label>
+<label>Username<input id="username" autocomplete="off"></label>
+<label>Password<div class="row"><input id="password" type="password" autocomplete="new-password"><button id="generate" type="button">Generate</button></div></label>
+<label>Authenticator secret or otpauth URI<input id="totp" autocomplete="off" spellcheck="false"></label>
+<button type="submit" class="primary">Save encrypted login</button>
+</form>
+</main><footer>Stored on your server. Unlocked on this device.</footer>
+<script src="ui.js"></script>
+</body></html>

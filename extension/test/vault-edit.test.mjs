@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomBytes} from 'node:crypto';
+import {Vault} from '../src/vault.js';
+import {encrypt,decryptText} from '../src/crypto.js';
+
+test('editing an imported cipher uses its item key and preserves passkeys, attachments, fields and extra URIs',async()=>{
+  const v=new Vault();v.key=new Uint8Array(randomBytes(64));v.userId='owner';v.deadline=Date.now()+300000;
+  const itemKey=new Uint8Array(randomBytes(64)),key=await encrypt(itemKey,v.key);
+  const raw={id:'fixture',type:1,key,revisionDate:'2026-10-23T00:00:00Z',reprompt:0,name:await encrypt('Old',itemKey),
+    notes:await encrypt('Private notes',itemKey),fields:[{name:'encrypted',value:'also encrypted'}],attachments:[{id:'attachment'}],
+    favorite:true,login:{username:await encrypt('Old',itemKey),password:await encrypt('Old',itemKey),
+      fido2Credentials:[{keyValue:'existing encrypted private key'}],uris:[{uri:await encrypt('https://old.example.com',itemKey),match:1},
+        {uri:await encrypt('androidapp://com.example',itemKey),match:0}]}};
+  v.rawItems=[raw];let sent;
+  v.request=async(path,options)=>{sent={path,...options};};v.sync=async()=>[];
+  await v.saveLogin({name:'Changed',username:'alice',password:'new secret',totp:'GEZDGNBV',uri:'https://new.example.com'},raw.id);
+  assert.equal(sent.path,'/api/ciphers/fixture');assert.equal(sent.method,'PUT');
+  assert.equal(sent.body.lastKnownRevisionDate,raw.revisionDate);assert.equal(sent.body.encryptedFor,'owner');
+  for (const field of ['key','notes','fields','attachments','favorite']) assert.deepEqual(sent.body[field],raw[field]);
+  assert.deepEqual(sent.body.login.fido2Credentials,raw.login.fido2Credentials);
+  assert.deepEqual(sent.body.login.uris[1],raw.login.uris[1]);
+  assert.equal(await decryptText(sent.body.login.password,itemKey),'new secret');
+  assert.equal(await decryptText(sent.body.name,itemKey),'Changed');
+  await assert.rejects(decryptText(sent.body.login.password,v.key),/authentication failed/);
+});
+test('trash uses recoverable deletion and protected or missing items cannot be changed',async()=>{
+  const v=new Vault();v.key=new Uint8Array(64);v.deadline=Date.now()+300000;
+  v.items=[{id:'normal'},{id:'protected',reprompt:1}];let request;
+  v.request=async(path,options)=>{request={path,...options};};v.sync=async()=>[];
+  await v.deleteLogin('normal');assert.equal(request.path,'/api/ciphers/normal/delete');assert.equal(request.method,'PUT');
+  await assert.rejects(v.deleteLogin('protected'),/cannot be deleted/);await assert.rejects(v.deleteLogin('missing'),/cannot be deleted/);
+  v.rawItems=[{id:'protected',reprompt:1}];await assert.rejects(v.saveLogin({name:'overwrite'},'protected'),/cannot be edited/);
+  await assert.rejects(v.saveLogin({name:'overwrite'},'missing'),/cannot be edited/);
+});

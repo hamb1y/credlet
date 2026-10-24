@@ -1,0 +1,7 @@
+PyInstaller==6.22.3
+comtypes==1.4.17; sys_platform == "win32"
+pyobjc-core==12.2.2; sys_platform == "darwin"
+pyobjc-framework-Quartz==12.2.2; sys_platform == "darwin"
+pyobjc-framework-CoreText==12.2.2; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices==12.2.2; sys_platform == "darwin"
+pyobjc-framework-Cocoa==12.2.2; sys_platform == "darwin"

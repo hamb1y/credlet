@@ -1,0 +1,5 @@
+# The desktop build image only needs its dependency list and Dockerfile.
+# Keep vault state, test credentials and runtime downloads out of the context.
+**
+!desktop/requirements-build.txt
+!desktop/linux/Dockerfile
