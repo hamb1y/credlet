@@ -9,8 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY desktop/requirements-build.txt /tmp/requirements-build.txt
 RUN python3 -m venv --system-site-packages /opt/lockbox-build \
-    && /opt/lockbox-build/bin/pip install --no-cache-dir -r /tmp/requirements-build.txt \
-    && useradd --create-home --uid 1000 builder
+    && /opt/lockbox-build/bin/pip install --no-cache-dir -r /tmp/requirements-build.txt
+ARG BUILDER_UID=1000
+ARG BUILDER_GID=1000
+RUN groupadd --gid "$BUILDER_GID" builder \
+    && useradd --create-home --uid "$BUILDER_UID" --gid "$BUILDER_GID" builder
 ENV PATH=/opt/lockbox-build/bin:$PATH
 WORKDIR /work
 USER builder

@@ -25,7 +25,9 @@ def main():
         config = json.loads((state / 'compose.json').read_text())
         vault = config['services']['vault']
         assert vault['environment']['SIGNUPS_ALLOWED'] == 'false'
-        assert vault['volumes'][0]['source'] == str(state / 'data')
+        # Windows runner temp paths may use a short-name alias; the frozen CLI
+        # resolves it to its canonical spelling before writing Compose files.
+        assert Path(vault['volumes'][0]['source']).samefile(state / 'data')
         assert 'ports' not in vault
         assert not (bundle / '_internal/state').exists()
         before = (state / 'config.json').read_bytes()

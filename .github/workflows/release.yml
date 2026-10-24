@@ -42,7 +42,9 @@ jobs:
         run: python tools/release.py validate
       - name: Build Linux baseline container
         if: runner.os == 'Linux'
-        run: docker build --tag lockbox-build --file desktop/linux/Dockerfile .
+        run: |
+          docker build --tag lockbox-build --file desktop/linux/Dockerfile \
+            --build-arg BUILDER_UID="$(id -u)" --build-arg BUILDER_GID="$(id -g)" .
       - name: Build and exercise Linux bundles
         if: runner.os == 'Linux'
         run: |
@@ -178,5 +180,6 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           gh release create "$RELEASE_TAG" dist/release/* \
-            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
             --title "Lockbox ${RELEASE_TAG#v}" --notes-file dist/release-notes.md
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

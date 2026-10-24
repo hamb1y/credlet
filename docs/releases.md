@@ -59,7 +59,9 @@ only the final publish job receives `contents: write`. Actions are pinned to
 commit SHAs and checked-out build code does not retain Git credentials.
 
 The workflow will not overwrite an existing release. Publish a new version for
-corrected public assets. Manual dispatch builds candidates without creating a
+corrected public assets. Assets upload to a draft first; publication happens
+only after every upload completes. An interrupted upload leaves a draft for
+the maintainer to inspect before retrying. Manual dispatch builds candidates without creating a
 release. No macOS job or binary is included while platform work is deferred.
 
 ## Optional Firefox signing
