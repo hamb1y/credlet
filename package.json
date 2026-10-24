@@ -9,7 +9,7 @@
     "build:client": "vite build --config client/vite.config.js",
     "build:server": "cmake -S server -B server/build-v3 -DCMAKE_BUILD_TYPE=Release && cmake --build server/build-v3 --parallel",
     "tauri": "tauri",
-    "test": "node --test client/test/*.test.js",
+    "test": "node --test client/test/*.test.js extension/test/passkeys.test.mjs",
     "test:legacy": "node --test extension/test/*.test.mjs"
   },
   "dependencies": {

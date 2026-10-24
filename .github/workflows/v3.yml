@@ -118,7 +118,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: rustup toolchain install stable --profile minimal && rustup target add aarch64-linux-android
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+      - run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"'
       - run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
       - run: npm ci --no-audit --no-fund
       - run: npm run tauri -- android init --ci --skip-targets-install

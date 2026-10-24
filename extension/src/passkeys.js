@@ -4,7 +4,8 @@ import {b64, unb64, bytes, utf8, concat, random} from '../../client/lib/crypto.j
 export const url64 = value => b64(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 export function fromUrl64(value) {
   if (typeof value !== 'string' || !/^[\w+/=-]*$/.test(value)) throw Error('Invalid encoded credential data.');
-  return unb64(value.replace(/-/g, '+').replace(/_/g, '/'));
+  const normalized=value.replace(/-/g, '+').replace(/_/g, '/');
+  return unb64(normalized.padEnd(Math.ceil(normalized.length/4)*4,'='));
 }
 function fail(message, name = 'NotAllowedError') { const e = Error(message); e.name = name; throw e; }
 function encoded(value, min, max) {
