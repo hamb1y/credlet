@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Credlet",
+  "version": "0.3.0",
+  "identifier": "com.credlet.client",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build:client",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../client/dist"
+  },
+  "app": {
+    "windows": [{"label":"main","title":"Credlet","width":960,"height":800,"minWidth":360,"minHeight":640}],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "shortDescription": "Your credentials, together.",
+    "category": "Utility",
+    "android": {"minSdkVersion":26}
+  }
+}

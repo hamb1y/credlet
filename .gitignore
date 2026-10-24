@@ -1,4 +1,9 @@
 state/
+state-v3/
+server/build-v3*/
+client/dist/
+src-tauri/target/
+src-tauri/gen/
 __pycache__/
 *.pyc
 .tools/

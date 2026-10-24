@@ -1,0 +1,131 @@
+name: Credlet 0.3 development
+on:
+  push:
+    branches: [main, rewrite/v0.3.0]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v3-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux:
+    name: C server / sanitizers / Svelte extensions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libsodium-dev libsqlite3-dev libjson-c-dev libevent-dev
+      - run: cmake -S server -B server/build-v3 -DCMAKE_BUILD_TYPE=Debug -DCREDLET_SANITIZE=ON && cmake --build server/build-v3 --parallel
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - run: npm exec --yes --package=addons-linter@10.14.0 -- addons-linter extension/dist/firefox --warnings-as-errors
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: v3-browser-development-builds
+          path: extension/dist/
+          retention-days: 7
+  windows-server:
+    name: C server / Windows
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e
+        with:
+          msystem: UCRT64
+          path-type: inherit
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-libsodium
+            mingw-w64-ucrt-x86_64-sqlite3
+            mingw-w64-ucrt-x86_64-json-c
+            mingw-w64-ucrt-x86_64-libevent
+      - shell: msys2 {0}
+        run: |
+          cmake -S server -B server/build-v3 -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build server/build-v3 --parallel
+          npm ci --no-audit --no-fund
+          npm test
+  native:
+    name: Tauri / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Linux WebView dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf webkit2gtk-driver xvfb dbus-x11 libsodium-dev libsqlite3-dev libjson-c-dev libevent-dev
+      - run: rustup toolchain install stable --profile minimal
+      - run: npm ci --no-audit --no-fund
+      - run: npm run tauri -- build --debug --no-bundle -- --locked
+      - name: Exercise actual Linux Tauri UI and encrypted HTTP adapter
+        if: runner.os == 'Linux'
+        run: |
+          npm run build:server
+          cargo install tauri-driver --version 2.1.0 --locked
+          dbus-run-session -- xvfb-run -a python3 tests/v3_browser.py --engine tauri --driver "$HOME/.cargo/bin/tauri-driver" --application src-tauri/target/debug/credlet
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: tauri-development-${{ runner.os }}
+          path: |
+            src-tauri/target/debug/credlet
+            src-tauri/target/debug/credlet.exe
+          retention-days: 7
+  android:
+    name: Tauri / Android arm64 APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: rustup toolchain install stable --profile minimal && rustup target add aarch64-linux-android
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+      - run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - run: npm ci --no-audit --no-fund
+      - run: npm run tauri -- android init --ci --skip-targets-install
+      - run: npm run tauri -- android build --debug --apk --target aarch64 --ci
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: tauri-development-Android
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 7

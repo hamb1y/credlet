@@ -1,3 +1,12 @@
+> **0.3.0 development:** this branch replaces the core with an entirely C server,
+> application-encrypted HTTP, and one Svelte codebase for Chrome/Firefox and
+> Tauri Android/Linux/Windows clients. See the [rewrite architecture, setup and
+> release gates](docs/v0.3.0.md). **0.3.0 is not released.**
+>
+> The documentation below describes the published
+> [0.2.0 release](https://github.com/hamb1y/credlet/tree/v0.2.0), which uses the
+> earlier architecture. Its platform acceptance does not apply to the rewrite.
+
 <p align="center">
   <img src="docs/assets/credlet-banner.svg" alt="Credlet — Your vault. Your server. Your devices." width="100%">
 </p>

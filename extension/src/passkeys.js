@@ -1,5 +1,5 @@
 import {parse} from 'tldts';
-import {b64, unb64, bytes, utf8, concat, random} from './crypto.js';
+import {b64, unb64, bytes, utf8, concat, random} from '../../client/lib/crypto.js';
 
 export const url64 = value => b64(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 export function fromUrl64(value) {
