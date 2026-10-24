@@ -3,7 +3,9 @@ import {generatePassword, totp} from './crypto.js';
 
 export function controller({vault=new Vault(),settings={get:async()=>({}),set:async()=>{}}}={}) {
   async function status() {
-    try { vault.requireUnlocked(); } catch { /* Locked is a normal state. */ }
+    // A status read during key derivation must not cancel the pending login.
+    // Only an existing key can expire; explicit lock still invalidates login.
+    if(vault.key) { try { vault.requireUnlocked(); } catch { /* Expired is a normal state. */ } }
     return {...await settings.get(),unlocked:!!vault.key,deadline:vault.deadline,
       items:vault.items.map(({id,name,login})=>({id,name,username:login.username,uris:login.uris,hasTotp:!!login.totp,hasPasskey:!!login.fido2Credentials?.length}))};
   }

@@ -8,6 +8,7 @@ import net from 'node:net';
 import nacl from 'tweetnacl';
 import {Transport} from '../lib/transport.js';
 import {Vault,matchesOrigin} from '../lib/vault.js';
+import {controller} from '../lib/controller.js';
 import {b64,unb64,utf8,random,seal,open,totp} from '../lib/crypto.js';
 
 const executable=process.env.CREDLET_SERVER || path.resolve('server/build-v3/credlet-server'+(process.platform==='win32'?'.exe':''));
@@ -150,4 +151,23 @@ test('paginated sync retains all records and an interrupted login cannot unlock 
   await assert.rejects(attempt,/locked/);assert.equal(delayed.key,null);
   const savedToken=vault.token;await vault.logout();
   await assert.rejects(transport.request('sync',{},savedToken),e=>e.status===401);
+});
+
+test('reading status during an in-flight unlock does not cancel its key derivation',async t=>{
+  const f=await fixture(t);
+  let release,entered;
+  const pending=new Promise(resolve=>{release=resolve;}), started=new Promise(resolve=>{entered=resolve;});
+  let first=true;
+  const vault=new Vault({exchange:async(origin,envelope)=>{
+    if(first) { first=false; entered(); await pending; }
+    return (await send(origin,envelope)).json();
+  }});
+  const core=controller({vault});
+  const attempt=core.dispatch({type:'login',server:f.server,serverKey:f.serverKey,email:'owner@example.com',
+    password:'disposable status race master',enrollmentToken:f.enrollmentToken});
+  await started;
+  try { assert.equal((await core.status()).unlocked,false); }
+  finally { release(); }
+  assert.equal((await attempt).unlocked,true);
+  await vault.logout();
 });

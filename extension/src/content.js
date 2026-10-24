@@ -5,6 +5,9 @@
   const visible = field => field instanceof HTMLInputElement && !field.disabled && !field.readOnly &&
     field.type !== 'hidden' && field.getClientRects().length > 0 &&
     getComputedStyle(field).visibility !== 'hidden' && getComputedStyle(field).display !== 'none';
+  // Firefox can expose an empty .autocomplete for one-time-code. Read the
+  // declared tokens so that standard OTP fields still work on that browser.
+  const autocomplete = (field, token) => (field.getAttribute('autocomplete') || '').trim().toLowerCase().split(/\s+/).includes(token);
   const setValue = (field, value) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(field, value);
@@ -20,14 +23,14 @@
     const active = document.activeElement;
     if (message.type === 'credlet-fill-code') {
       const codes=fields.filter(f=>['text','tel','number'].includes(f.type) &&
-        (f.autocomplete === 'one-time-code' || /^(otp|totp|code|verification.?code|authenticator.?code)$/i.test(f.name || f.id)));
+        (autocomplete(f,'one-time-code') || /^(otp|totp|code|verification.?code|authenticator.?code)$/i.test(f.name || f.id)));
       const field=codes.includes(active) ? active : codes.length===1 ? codes[0] : null;
       if (!field || (field.form && new URL(field.form.action || location.href,location.href).origin !== location.origin)) {
         respond({filled:false});return false;
       }
       setValue(field,message.code);respond({filled:true});return false;
     }
-    const passwords = fields.filter(f => f.type === 'password' && f.autocomplete !== 'new-password');
+    const passwords = fields.filter(f => f.type === 'password' && !autocomplete(f,'new-password'));
     // Prefer the focused form, otherwise one unambiguous login form.
     const focused = passwords.filter(f => f.form && f.form === active?.form);
     const password = passwords.includes(active) ? active : focused.length === 1 ? focused[0] :
@@ -36,8 +39,8 @@
     const form = password?.form || active?.form;
     const scope = form ? fields.filter(f => f.form === form) : fields;
     const candidates = scope.filter(f => ['text', 'email', 'tel'].includes(f.type) &&
-      (f.autocomplete === 'username' || f.type === 'email' || /user|email|login/i.test(f.name + ' ' + f.id)));
-    const usernames = candidates.filter(f => f.autocomplete === 'username');
+      (autocomplete(f,'username') || f.type === 'email' || /user|email|login/i.test(f.name + ' ' + f.id)));
+    const usernames = candidates.filter(f => autocomplete(f,'username'));
     const username = candidates.includes(active) ? active : candidates.length === 1 ? candidates[0] :
       usernames.length === 1 ? usernames[0] : null;
     // Reject forms which submit credentials to a different origin or downgrade to HTTP.

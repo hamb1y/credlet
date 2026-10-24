@@ -10,9 +10,19 @@ export async function makePlatform() {
       if(!result?.ok) { const error=Error(result?.error||'Credlet is unavailable.'); error.locked=result?.locked; throw error; }
       return result.value;
     },
-    async activeTab() { const [tab]=await api.tabs.query({active:true,currentWindow:true}); return tab; },
+    async activeTab() {
+      const target=new URL(location.href).searchParams.get('target');
+      if(target && /^\d+$/.test(target)) {
+        try { return await api.tabs.get(Number(target)); } catch { return null; }
+      }
+      const [tab]=await api.tabs.query({active:true,currentWindow:true}); return tab;
+    },
     async copy(value) { await navigator.clipboard.writeText(value); },
-    async expand() { await api.tabs.create({url:api.runtime.getURL('vault.html')}); }
+    async expand() {
+      const tab=await this.activeTab();
+      const target=tab?.url?.startsWith('https://') ? '?target='+tab.id : '';
+      await api.tabs.create({url:api.runtime.getURL('vault.html')+target});
+    }
   };
   const native=!!globalThis.__TAURI_INTERNALS__;
   let exchange;

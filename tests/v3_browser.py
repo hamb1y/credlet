@@ -2,23 +2,65 @@
 """Exercise the actual unified Svelte extension against the disposable C server."""
 import argparse
 import base64
+from contextlib import contextmanager
+import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
 from pathlib import Path
 import socket
+import ssl
 import subprocess
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
 import zipfile
+
+from v3_extension import exercise_extension
 
 
 def free_port():
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
         return sock.getsockname()[1]
+
+
+@contextmanager
+def website_fixture(root):
+    """HTTPS is required by website passkeys; the Credlet server remains HTTP."""
+    ca=root/'ca.pem'; ca_key=root/'ca.key'
+    certificate=root/'website.pem'; key=root/'website.key'; csr=root/'website.csr'; extensions=root/'website.ext'
+    subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1',
+        '-subj','/CN=Credlet disposable website CA','-addext','basicConstraints=critical,CA:TRUE',
+        '-addext','keyUsage=critical,keyCertSign,cRLSign','-keyout',str(ca_key),'-out',str(ca)],check=True,capture_output=True)
+    subprocess.run(['openssl','req','-newkey','rsa:2048','-nodes','-subj','/CN=localhost',
+        '-keyout',str(key),'-out',str(csr)],check=True,capture_output=True)
+    extensions.write_text('subjectAltName=DNS:localhost\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n')
+    subprocess.run(['openssl','x509','-req','-in',str(csr),'-CA',str(ca),'-CAkey',str(ca_key),
+        '-CAcreateserial','-out',str(certificate),'-days','1','-extfile',str(extensions)],check=True,capture_output=True)
+    public=subprocess.check_output(['openssl','x509','-in',str(certificate),'-pubkey','-noout'])
+    spki=subprocess.check_output(['openssl','pkey','-pubin','-outform','DER'],input=public)
+    fingerprint=base64.b64encode(hashlib.sha256(spki).digest()).decode()
+    class Website(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body=b'''<!doctype html><title>Credlet acceptance website</title>
+            <form onsubmit="window.submitted=true;return false">
+            <label>Username<input id="user" autocomplete="username"></label>
+            <label>Password<input id="pass" type="password" autocomplete="current-password"></label>
+            <label>Code<input id="otp-field" autocomplete="one-time-code"></label>
+            <button>Sign in</button></form>'''
+            self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8')
+            self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
+        def log_message(self,*args):pass
+    httpd=ThreadingHTTPServer(('127.0.0.1',0),Website)
+    context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); context.load_cert_chain(certificate,key)
+    httpd.socket=context.wrap_socket(httpd.socket,server_side=True)
+    thread=threading.Thread(target=httpd.serve_forever,daemon=True);thread.start()
+    try:yield f'https://localhost:{httpd.server_port}',ca,fingerprint
+    finally:httpd.shutdown();httpd.server_close();thread.join(timeout=5)
 
 
 def main():
@@ -32,8 +74,12 @@ def main():
     parser.add_argument('--screenshot',type=Path)
     args=parser.parse_args()
     extension=Path('extension/dist')/args.engine
-    with tempfile.TemporaryDirectory(prefix='credlet v3 browser ') as temporary:
+    with tempfile.TemporaryDirectory(prefix='credlet v3 browser ') as temporary, website_fixture(Path(temporary)) as website:
         root=Path(temporary); state=root/'state'; profile=root/'profile'; profile.mkdir()
+        website_origin,certificate,fingerprint=website
+        if args.engine=='firefox':
+            subprocess.run(['certutil','-N','--empty-password','-d','sql:'+str(profile)],check=True,capture_output=True)
+            subprocess.run(['certutil','-A','-n','Credlet disposable website','-t','C,,','-d','sql:'+str(profile),'-i',str(certificate)],check=True,capture_output=True)
         pairing=json.loads(subprocess.check_output([str(args.server.resolve()),'init','--state',str(state),'--owner','owner@example.com'],text=True))
         api_port,driver_port=free_port(),free_port()
         address=f'http://127.0.0.1:{api_port}'
@@ -71,7 +117,7 @@ def main():
                     options={'browserName':'firefox','moz:firefoxOptions':{'args':['-headless','-profile',str(profile)],'prefs':{'browser.shell.checkDefaultBrowser':False}}}
                 elif args.engine=='chrome':
                     assert args.chrome,'--chrome is required for Chrome'
-                    options={'browserName':'chrome','goog:chromeOptions':{'binary':str(args.chrome.resolve()),'enableExtensionTargets':True,'args':['--headless=new','--no-first-run','--no-default-browser-check','--user-data-dir='+str(profile),'--load-extension='+str(extension.resolve()),'--disable-extensions-except='+str(extension.resolve())]}}
+                    options={'browserName':'chrome','goog:chromeOptions':{'binary':str(args.chrome.resolve()),'enableExtensionTargets':True,'args':['--headless=new','--no-first-run','--no-default-browser-check','--ignore-certificate-errors-spki-list='+fingerprint,'--user-data-dir='+str(profile),'--load-extension='+str(extension.resolve()),'--disable-extensions-except='+str(extension.resolve())]}}
                 else:
                     assert args.application,'--application is required for Tauri'
                     options={'tauri:options':{'application':str(args.application.resolve())}}
@@ -91,13 +137,18 @@ def main():
                     if found:break
                     time.sleep(.1)
                 assert found,'Extension did not open its UI'
+                if args.engine!='tauri':
+                    ui_url=command('GET','/url')
+                    target=command('POST','/execute/async',{'script':'const done=arguments[arguments.length-1];(globalThis.browser||chrome).tabs.create({url:arguments[0],active:false}).then(t=>done(t.id));','args':[website_origin+'/login']})
+                    command('POST','/url',{'url':ui_url.split('?')[0]+'?target='+str(target)})
+                ui_handle=command('GET','/window')
                 wait('return [...document.querySelectorAll("button")].some(b=>b.textContent.includes("First time"))','Svelte sign-in did not render')
                 button('First time? Set up your vault')
                 fill({'Server HTTP address':address,'Server public key':pairing['serverKey'],'Owner email':'owner@example.com','Master password':'disposable v3 master phrase 8482','One-time enrollment token':pairing['enrollmentToken']})
                 script('document.querySelector("form").requestSubmit()')
                 wait('return document.querySelector("h1")?.textContent.startsWith("Logins")','Encrypted enrollment failed')
                 button('+ New login')
-                fill({'Name':'Svelte browser fixture','Username':'browser-owner','Password':'private browser password 7482','Website':'https://example.com/login','Authenticator secret':'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ','Encrypted notes':'Only inside the encrypted vault.'})
+                fill({'Name':'Svelte browser fixture','Username':'browser-owner','Password':'private browser password 7482','Website':website_origin+'/login','Authenticator secret':'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ','Encrypted notes':'Only inside the encrypted vault.'})
                 script('document.querySelector("form").requestSubmit()')
                 wait('return document.querySelector(".logins strong")?.textContent==="Svelte browser fixture"','Save failed')
                 script('document.querySelector("input[type=search]").value="no such item";document.querySelector("input[type=search]").dispatchEvent(new Event("input",{bubbles:true}))')
@@ -126,6 +177,8 @@ def main():
                 script('document.querySelector("form").requestSubmit()')
                 wait('return document.querySelector(".logins strong")?.textContent==="Updated Svelte fixture"','Fresh unlock did not sync saved login')
                 print('PASS '+args.engine+' unified Svelte UI: encrypted HTTP enrollment, create/edit, search, notes, reveal, TOTP, lock and fresh unlock')
+                if args.engine!='tauri':
+                    exercise_extension(command,script,wait,button,fill,ui_handle,target,website_origin)
             finally:
                 if sid:
                     try:command('DELETE','')

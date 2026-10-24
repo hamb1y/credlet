@@ -16,15 +16,19 @@
     finally { busy=false; }
   }
   async function refresh() {
+    const started=generation;
     const value=await platform.request({type:'status'});
+    if(started!==generation) return;
     if(!value.unlocked && state.unlocked) wipe();
     state=value;
     if(!server) { server=value.server||''; serverKey=value.serverKey||''; email=value.email||''; }
     remaining=Math.max(0,Math.ceil((value.deadline-Date.now())/1000));
   }
   async function loadApproval() {
+    const started=generation;
     const requestId=new URL(location.href).searchParams.get('passkey');
-    request=requestId ? {id:requestId,...await platform.request({type:'passkey-info',requestId})} : null;
+    const value=requestId ? {id:requestId,...await platform.request({type:'passkey-info',requestId})} : null;
+    if(started===generation) request=value;
   }
   async function unlock(event) {
     event.preventDefault();
@@ -41,7 +45,7 @@
     try { await platform.request({type:'lock'}); } catch { /* The local view is already locked. */ }
   }
   async function details(id) {
-    await work(async()=>{ const started=generation; const value=await platform.request({type:'details',id}); if(started!==generation) return; selected=value; page='detail'; showPassword=false; code=null; if(value.login.totp) code=await platform.request({type:'totp',id}); });
+    await work(async()=>{ const started=generation; const value=await platform.request({type:'details',id}); if(started!==generation) return; selected=value; page='detail'; showPassword=false; code=null; if(value.login.totp) { const fresh=await platform.request({type:'totp',id}); if(started===generation) code=fresh; } });
   }
   function edit() {
     const login=selected?.login;
@@ -54,7 +58,13 @@
   }
   async function remove() {
     if(!confirm('Delete this login from every synced client? This cannot be undone in v0.3.0.')) return;
-    await work(async()=>{state=await platform.request({type:'delete',id:selected.id});selected=null;page='list';},'Login deleted.');
+    await work(async()=>{const started=generation;const value=await platform.request({type:'delete',id:selected.id});if(started!==generation)return;state=value;selected=null;page='list';},'Login deleted.');
+  }
+  async function syncVault() {
+    await work(async()=>{const started=generation;const value=await platform.request({type:'sync'});if(started===generation)state=value;},'Vault synced.');
+  }
+  async function generate() {
+    await work(async()=>{const started=generation;const value=await platform.request({type:'generate'});if(started===generation){editor={...editor,password:value};showPassword=true;}});
   }
   async function copy(field) {
     await work(async()=>{
@@ -84,7 +94,7 @@
         }
         ticks++;
         if(!busy && ticks%5===0) {
-          try { await refresh(); if(selected?.login.totp && page==='detail') code=await platform.request({type:'totp',id:selected.id}); }
+          try { await refresh(); if(selected?.login.totp && page==='detail') { const started=generation,id=selected.id; const fresh=await platform.request({type:'totp',id}); if(started===generation && selected?.id===id && page==='detail')code=fresh; } }
           catch(e) { if(e.locked) wipe(); }
         }
       },1000);
@@ -129,7 +139,7 @@
         <label>Name<input bind:value={editor.name} required maxlength="200" placeholder="e.g. Personal email" /></label>
         <label>Username<input bind:value={editor.username} autocomplete="off" /></label>
         <label>Password<div class="input-action"><input type={showPassword?'text':'password'} bind:value={editor.password} autocomplete="new-password" /><button type="button" onclick={()=>showPassword=!showPassword}>{showPassword?'Hide':'Show'}</button></div></label>
-        <button type="button" class="text" disabled={busy} onclick={()=>work(async()=>{editor={...editor,password:await platform.request({type:'generate'})};showPassword=true;})}>Generate a strong password ↗</button>
+        <button type="button" class="text" disabled={busy} onclick={generate}>Generate a strong password ↗</button>
         <label>Website <span class="optional">optional</span><input type="url" bind:value={editor.uri} placeholder="https://example.com" /><small>Website matching uses the exact HTTPS origin.</small></label>
         <label>Authenticator secret <span class="optional">optional</span><input type="password" bind:value={editor.totp} autocomplete="off" spellcheck="false" placeholder="Secret key or otpauth:// URL" /></label>
         <label>Encrypted notes<textarea rows="4" bind:value={editor.notes} maxlength="12000"></textarea></label>
@@ -147,7 +157,7 @@
     {:else}
       <div class="toolbar"><div><p class="eyebrow">YOUR PRIVATE SPACE</p><h1>Logins <span class="count">{state.items.length}</span></h1></div><button class="primary" disabled={busy} onclick={()=>{selected=null;edit();}}>+ New login</button></div>
       <label class="search"><span class="sr-only">Search logins</span><input type="search" bind:value={query} placeholder="Search names, usernames or websites" /></label>
-      <div class="list-toolbar"><small>{visible.length} {visible.length===1?'login':'logins'}</small><button class="text" disabled={busy} onclick={()=>work(async()=>{state=await platform.request({type:'sync'});},'Vault synced.')}>{busy?'Working…':'↻ Sync'}</button></div>
+      <div class="list-toolbar"><small>{visible.length} {visible.length===1?'login':'logins'}</small><button class="text" disabled={busy} onclick={syncVault}>{busy?'Working…':'↻ Sync'}</button></div>
       {#if visible.length}<ul class="logins">{#each visible as item(item.id)}<li><button disabled={busy} onclick={()=>details(item.id)}><span class="avatar" aria-hidden="true">{item.name.slice(0,1).toUpperCase()}</span><span class="login-name"><strong>{item.name}</strong><small>{item.username||'No username'}</small></span>{#if matchesOrigin(item,activeTab?.url)}<span class="badge">This site</span>{:else if item.hasPasskey}<span class="badge">Passkey</span>{/if}<span aria-hidden="true">›</span></button></li>{/each}</ul>
       {:else}<section class="empty"><span class="empty-mark" aria-hidden="true">◇</span><h2>{query?'No matching logins':'A fresh start.'}</h2><p>{query?'Try another name or website.':'Add your first login. Credlet encrypts it before syncing.'}</p>{#if query}<button onclick={()=>query=''}>Clear search</button>{:else}<button class="primary" onclick={()=>{selected=null;edit();}}>Create your first login</button>{/if}</section>{/if}
       <p class="footnote">Encrypted on your device. Synced to your server.</p>
