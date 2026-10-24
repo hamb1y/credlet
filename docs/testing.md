@@ -21,7 +21,7 @@ python3 tests/integration.py \
   --bw .tools/node_modules/.bin/bw --library-path .tools/lib
 ```
 
-The fetcher verifies the pinned OCI index, platform manifest and layer digests. A system compatible with the binary's other dynamic dependencies is still required. Production uses the complete image. The default integration proxy is a test fixture. To test real Caddy HTTPS/WebSocket forwarding, run `python3 tools/fetch-caddy-test-runtime.py` and add `--caddy .tools/caddy` to the integration command. The complete generated Compose stack also passed HTTPS, encrypted clients, passkeys, WSS and full backup/recovery in an isolated Docker VM. See [container acceptance and repeatable setup](docs/container-testing.md) for its scope and commands.
+The fetcher verifies the pinned OCI index, platform manifest and layer digests. A system compatible with the binary's other dynamic dependencies is still required. Production uses the complete image. The default integration proxy is a test fixture. To test real Caddy HTTPS/WebSocket forwarding, run `python3 tools/fetch-caddy-test-runtime.py` and add `--caddy .tools/caddy` to the integration command. The complete generated Compose stack also passed HTTPS, encrypted clients, passkeys, WSS and full backup/recovery in an isolated Docker VM. See [container acceptance and repeatable setup](container-testing.md) for its scope and commands.
 
 
 ## Release automation and tested scope
