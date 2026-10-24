@@ -20,13 +20,13 @@ from android_ui import AndroidUi
 
 ROOT=Path(__file__).resolve().parents[1]
 PACKAGE='com.x8bit.bitwarden'
-FIXTURE='org.lockbox.fixture'
+FIXTURE='org.credlet.fixture'
 
 
 class NativeUi(AndroidUi):
     def nodes(self):
-        data=self.run('exec-out','env','CLASSPATH=/data/local/tmp/lockbox-ui.apk',
-            'app_process','/system/bin','org.lockbox.fixture.UiDump')
+        data=self.run('exec-out','env','CLASSPATH=/data/local/tmp/credlet-ui.apk',
+            'app_process','/system/bin','org.credlet.fixture.UiDump')
         return [n for n in ET.fromstring(data).iter('node') if n.get('visible')=='true']
 
     def wait_value(self,package,description,value):
@@ -59,8 +59,8 @@ class NativeUi(AndroidUi):
         # Invoke the actual node's accessibility click instead of tapping those coordinates.
         if label=='Integration fixture':
             print('Native fixture selection: '+repr({key:node.get(key) for key in ('package','class','bounds')}),flush=True)
-            data=self.run('exec-out','env','CLASSPATH=/data/local/tmp/lockbox-ui.apk',
-                'app_process','/system/bin','org.lockbox.fixture.UiDump','--click',shlex.quote(label))
+            data=self.run('exec-out','env','CLASSPATH=/data/local/tmp/credlet-ui.apk',
+                'app_process','/system/bin','org.credlet.fixture.UiDump','--click',shlex.quote(label))
             if ET.fromstring(data).get('success')=='true':return
             node=self.wait(label)
         self.tap(node)
@@ -102,8 +102,8 @@ def main():
         ui.run('shell','restorecon','-R','/data/misc/user/0/cacerts-added')
         ui.run('shell','am','broadcast','-a','android.security.action.TRUST_STORE_CHANGED')
         ui.run('reverse','tcp:'+port,'tcp:'+port)
-        ui.run('install','-r',str(ROOT/'.tools/android-test/fixture/lockbox-fixture.apk'))
-        ui.run('push',str(ROOT/'.tools/android-test/fixture/lockbox-fixture.apk'),'/data/local/tmp/lockbox-ui.apk')
+        ui.run('install','-r',str(ROOT/'.tools/android-test/fixture/credlet-fixture.apk'))
+        ui.run('push',str(ROOT/'.tools/android-test/fixture/credlet-fixture.apk'),'/data/local/tmp/credlet-ui.apk')
         # Failed WebAuthn sessions can leave Android's singleTop selector above later app tasks.
         ui.run('shell','am','force-stop','com.android.credentialmanager')
         ui.run('shell','pm','clear',PACKAGE)

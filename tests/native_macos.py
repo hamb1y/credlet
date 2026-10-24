@@ -35,7 +35,7 @@ def wait(predicate, message, seconds=15):
 class Fixture:
     def __init__(self, executable, root):
         self.root = root; self.serial = 0; root.mkdir(mode=0o700)
-        (root / '.disposable').write_text('lockbox-native-macos-fixture\n')
+        (root / '.disposable').write_text('credlet-native-macos-fixture\n')
         self.process = subprocess.Popen([str(executable), str(root)])
         try:
             def ready():
@@ -43,7 +43,7 @@ class Fixture:
                 return (root / 'ready.json').exists()
             wait(ready, 'Cocoa fixture did not start')
             result = json.loads((root / 'ready.json').read_text())
-            assert result == {'pid': self.process.pid, 'bundleId': 'local.lockbox.fixture'}
+            assert result == {'pid': self.process.pid, 'bundleId': 'local.credlet.fixture'}
         except BaseException:
             self.close(); raise
 
@@ -82,8 +82,8 @@ def desktop_ui(fixture, root):
     import tkinter as tk
     from desktop.app import App
     config = root / 'settings'
-    previous = os.environ.get('LOCKBOX_CONFIG_DIR')
-    os.environ['LOCKBOX_CONFIG_DIR'] = str(config)
+    previous = os.environ.get('CREDLET_CONFIG_DIR')
+    os.environ['CREDLET_CONFIG_DIR'] = str(config)
     window = tk.Tk()
     app = None
     try:
@@ -145,6 +145,7 @@ def desktop_ui(fixture, root):
             assert app.target.pid == fixture.process.pid
             assert app.target.identity == str(Path(fixture.process.args[0]).resolve())
             app.items.selection_set(item['id'])
+            window.update()
         capture('user')
         layout('captured')
         before = fixture.command('inspect')
@@ -190,18 +191,18 @@ def desktop_ui(fixture, root):
     finally:
         if app: app.close()
         elif window.tk.call('info', 'commands', '.'): window.destroy()
-        if previous is None: os.environ.pop('LOCKBOX_CONFIG_DIR', None)
-        else: os.environ['LOCKBOX_CONFIG_DIR'] = previous
+        if previous is None: os.environ.pop('CREDLET_CONFIG_DIR', None)
+        else: os.environ['CREDLET_CONFIG_DIR'] = previous
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--fixture', type=Path, required=True, help='Packaged LockboxFixture.app')
+    parser.add_argument('--fixture', type=Path, required=True, help='Packaged CredletFixture.app')
     parser.add_argument('--disposable-root', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--desktop-ui', action='store_true',
         help='Also run the source vault UI against the disposable integration account; attend its native link dialog.')
-    parser.add_argument('--packaged-app', type=Path, help='Frozen Lockbox.app; use instead of --desktop-ui.')
+    parser.add_argument('--packaged-app', type=Path, help='Frozen Credlet.app; use instead of --desktop-ui.')
     parser.add_argument('--layout', type=Path, help='Successful source UI geometry from this Mac, required for --packaged-app.')
     args = parser.parse_args()
     if sys.platform != 'darwin': parser.error('Run only on an actual macOS graphical desktop')
@@ -215,7 +216,7 @@ def main():
     root = args.disposable_root.resolve(strict=True)
     if root.stat().st_uid != os.getuid() or root.stat().st_mode & 0o077:
         parser.error('The disposable root must be private (0700) and owned by the test user')
-    if (root / '.disposable').read_text().strip() != 'lockbox-disposable-macos-test':
+    if (root / '.disposable').read_text().strip() != 'credlet-disposable-macos-test':
         parser.error('Missing explicit disposable Mac test marker')
     report_path = args.report.resolve()
     if not report_path.is_relative_to(root): parser.error('Write reports only inside the disposable root')
@@ -227,9 +228,9 @@ def main():
     bundle = args.fixture.resolve(strict=True)
     if bundle.suffix != '.app': parser.error('--fixture must be a packaged .app')
     with (bundle / 'Contents/Info.plist').open('rb') as source: metadata = plistlib.load(source)
-    if metadata.get('CFBundleIdentifier') != 'local.lockbox.fixture' or metadata.get('CFBundleExecutable') != 'LockboxFixture':
+    if metadata.get('CFBundleIdentifier') != 'local.credlet.fixture' or metadata.get('CFBundleExecutable') != 'CredletFixture':
         parser.error('Wrong fixture application identity')
-    executable = bundle / 'Contents/MacOS/LockboxFixture'
+    executable = bundle / 'Contents/MacOS/CredletFixture'
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
     import ApplicationServices as AX
     if not AX.AXIsProcessTrusted():

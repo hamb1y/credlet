@@ -33,7 +33,7 @@ For one downloaded file, compare its `sha256sum filename` output to the matching
 line. Windows PowerShell:
 
 ```powershell
-Get-FileHash .\lockbox-desktop-0.1.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\credlet-desktop-0.2.0-win-x64.zip -Algorithm SHA256
 ```
 
 Checksums detect corruption; obtain both files and checksums from the intended
@@ -48,8 +48,8 @@ GitHub release. Native binaries are currently not code-signed.
 3. Tag the reviewed commit and push:
 
    ```sh
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.2.0
+   git push origin v0.2.0
    ```
 
 The workflow rejects a tag that differs from `package.json`. The publisher

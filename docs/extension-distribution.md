@@ -22,11 +22,11 @@ an explicit allowlist and exclude vault state, credentials and VM files.
 The clean-source verifier extracts into a fresh directory, runs all 12 Node
 tests, rebuilds and compares all three archives byte for byte.
 
-[GitHub Releases](https://github.com/hamb1y/lockbox/releases/latest) publishes
+[GitHub Releases](https://github.com/hamb1y/credlet/releases/latest) publishes
 these build outputs with explicit signing status. `SHA256SUMS` and
 `release-manifest.json` are the authoritative checksums for each release.
-The Firefox unsigned input is named `lockbox-firefox-VERSION-unsigned.xpi` in
-release assets; local packaging retains `lockbox-firefox-VERSION.xpi` for AMO
+The Firefox unsigned input is named `credlet-firefox-VERSION-unsigned.xpi` in
+release assets; local packaging retains `credlet-firefox-VERSION.xpi` for AMO
 submission. A signed XPI, when available, is a separate `-signed.xpi` asset.
 
 The [release workflow](../.github/workflows/release.yml) also runs pinned Mozilla
@@ -44,8 +44,8 @@ is optional: an **unlisted** submission returns a signed XPI for self-distributi
 See [Mozilla's signing overview](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/).
 
 Use your Mozilla Developer Hub account. In its new-submission flow choose
-**On your own**, upload `lockbox-firefox-0.1.0.xpi`, and attach
-`lockbox-extension-source-0.1.0.zip` when asked for source code. Select Firefox
+**On your own**, upload `credlet-firefox-0.2.0.xpi`, and attach
+`credlet-extension-source-0.2.0.zip` when asked for source code. Select Firefox
 desktop and Android compatibility. The package declares minimum **142** on both.
 The source ZIP's README and `extension/release/amo-metadata.json` supply build and
 reviewer notes; provide the privacy disclosure if requested. Download the signed
@@ -64,7 +64,7 @@ npm exec --yes --package=web-ext@10.8.0 -- web-ext sign \
   --amo-base-url https://addons.mozilla.org/api/v5/ \
   --source-dir extension/dist/firefox \
   --artifacts-dir extension/dist/signed \
-  --upload-source-code extension/dist/lockbox-extension-source-0.1.0.zip \
+  --upload-source-code extension/dist/credlet-extension-source-0.2.0.zip \
   --amo-metadata extension/release/amo-metadata.json
 ```
 
@@ -75,7 +75,7 @@ If approval remains pending, inspect that submission in the Developer Hub before
 attempting another upload. The signed output is a distinct artifact; keep the
 unsigned input/source checksums with it.
 
-The add-on ID is `lockbox@selfhost.local`. Keep the same ID and signing account
+The display name is Credlet. The add-on ID remains `lockbox@selfhost.local` for upgrade compatibility. Keep the same ID and signing account
 for updates, and increment `package.json`'s version before rebuilding. There is
 no self-hosted update manifest configured; self-distributed updates are installed
 manually. The local unsigned packager does not overwrite `extension/dist/signed`.

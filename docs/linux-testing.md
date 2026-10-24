@@ -1,5 +1,7 @@
 # Linux LTS desktop build and acceptance
 
+The detailed acceptance evidence below was recorded for **Lockbox 0.1.0**, before the Credlet rename. Commands use the current Credlet names; historical archive sizes and hashes refer to the original Lockbox artifacts. See [current testing](testing.md) for checks on the renamed version.
+
 The Linux x64 build recipe uses Ubuntu **22.04**, glibc **2.35**, distribution
 Python **3.10** with Tk/PyGObject, PyInstaller **6.22.3** and the checksum-verified
 Node **24.22.1** runtime. Its official Ubuntu amd64 base is pinned in
@@ -17,7 +19,7 @@ bundled ELF files were inspected; the highest required glibc symbol version is
 **2.35**. Real native checks also reject hidden, disabled, read-only, closed and
 mismatched-role fields without changing their contents.
 
-The current `desktop/dist/lockbox-desktop-0.1.0-linux-x64.tar.gz` is
+The earlier `desktop/dist/lockbox-desktop-0.1.0-linux-x64.tar.gz` is
 **61,137,592 bytes**, SHA-256
 `302f846ff89aa7e83d99bbb41fa3d74280d45fda948e7cf1975f75fa68784838`.
 `.tools/linux-lts/release-evidence.json` records the two full runs and executable
@@ -30,7 +32,7 @@ separate source copy so its dependencies and output do not replace another
 platform's work:
 
 ```sh
-docker build -f desktop/linux/Dockerfile -t lockbox-desktop-lts:22.04 .
+docker build -f desktop/linux/Dockerfile -t credlet-desktop-lts:22.04 .
 mkdir -p .tools/linux-build-source
 tar --exclude='desktop/build' --exclude='desktop/dist' \
   --exclude='desktop/fixture-build' --exclude='desktop/fixture-dist' \
@@ -38,12 +40,12 @@ tar --exclude='desktop/build' --exclude='desktop/dist' \
   package.json package-lock.json desktop extension/src tests \
   | tar -xf - -C .tools/linux-build-source
 docker run --rm --cap-drop ALL --security-opt no-new-privileges \
-  --user "$(id -u):$(id -g)" -e HOME=/tmp/lockbox-build-home \
-  -v "$PWD/.tools/linux-build-source:/work" lockbox-desktop-lts:22.04
+  --user "$(id -u):$(id -g)" -e HOME=/tmp/credlet-build-home \
+  -v "$PWD/.tools/linux-build-source:/work" credlet-desktop-lts:22.04
 ```
 
 The result is under `.tools/linux-build-source/desktop/dist/`: the complete
-`Lockbox` directory, tar archive, checksum and build inventory. Keep the entire
+`Credlet` directory, tar archive, checksum and build inventory. Keep the entire
 application directory together. The frozen executable's `--check-runtime`
 diagnostic checks its bundled dependencies without unlocking a vault. Runtime
 diagnostics alone do not establish working native application filling.
@@ -66,8 +68,8 @@ The `--desktop-linux-container` integration option runs that frozen interface
 inside the owned Ubuntu build container. It is intentionally fixed to the
 disposable VM described in [container testing](container-testing.md), its pinned
 SSH identity, QEMU vendor and disk marker. Its source/build path is
-`/srv/lockbox-test/desktop-lts`, and its local image is
-`lockbox-desktop-lts:22.04`. This test option does not select the host Docker
+`/srv/credlet-test/desktop-lts`, and its local image is
+`credlet-desktop-lts:22.04`. This test option does not select the host Docker
 daemon or an arbitrary remote machine.
 
 The older AT-SPI release exposed a compatibility bug: it lacks

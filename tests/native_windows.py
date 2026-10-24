@@ -32,7 +32,7 @@ class Fixture:
     def __init__(self, executable, root):
         self.root = Path(root); self.serial = 0
         self.root.mkdir()
-        (self.root / '.disposable').write_text('lockbox-native-windows-fixture\n')
+        (self.root / '.disposable').write_text('credlet-native-windows-fixture\n')
         self.process = subprocess.Popen([str(executable), str(self.root)])
         wait(lambda: (self.root / 'ready.json').exists(), 'Win32 fixture did not start.')
         self.ready = json.loads((self.root / 'ready.json').read_text())
@@ -81,7 +81,7 @@ def desktop_ui(fixture, root, runtime, layout_path):
     """Exercise actual Tk widgets and real target controls in the same desktop."""
     import tkinter as tk
     from desktop.app import App
-    os.environ['LOCKBOX_CONFIG_DIR'] = str(root / 'settings')
+    os.environ['CREDLET_CONFIG_DIR'] = str(root / 'settings')
     window = tk.Tk(); app = App(window, runtime_directory=runtime)
     def spin(predicate, message, seconds=30):
         def tick():
@@ -128,6 +128,7 @@ def desktop_ui(fixture, root, runtime, layout_path):
             spin(lambda: app.target is not None, 'Windows UI capture failed')
             assert app.target.pid == fixture.process.pid
             app.items.selection_set(item['id'])
+            window.update()
         capture('user')
         layout('captured')
         button('Fill selected field').invoke()
@@ -184,15 +185,15 @@ def main():
     args = parser.parse_args()
     if args.desktop_ui and args.packaged_app: parser.error('Choose source UI or packaged application')
     if args.packaged_app and not args.layout: parser.error('--packaged-app requires --layout')
-    if sys.platform != 'win32' or os.environ.get('COMPUTERNAME') != 'LOCKBOX-TEST':
-        raise RuntimeError('Run only on the disposable LOCKBOX-TEST Windows VM.')
+    if sys.platform != 'win32' or os.environ.get('COMPUTERNAME') != 'CREDLET-TEST':
+        raise RuntimeError('Run only on the disposable CREDLET-TEST Windows VM.')
     if args.environment:
         values = json.loads(args.environment.read_text(encoding='utf-8'))
         assert set(values) == {'TEST_SERVER', 'TEST_EMAIL', 'TEST_PASSWORD', 'TEST_ITEM_PASSWORD', 'NODE_EXTRA_CA_CERTS'}
         assert all(isinstance(value, str) for value in values.values())
         os.environ.update(values)
     passed = []
-    with interactive_display(), tempfile.TemporaryDirectory(prefix='lockbox-native-') as tmp:
+    with interactive_display(), tempfile.TemporaryDirectory(prefix='credlet-native-') as tmp:
         fixture = Fixture(args.fixture.resolve(), Path(tmp) / 'fixture')
         try:
             adapter = Windows()

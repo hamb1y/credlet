@@ -1,1 +1,1 @@
-"""Lockbox native application companion."""
+"""Credlet native application companion."""

@@ -1,4 +1,4 @@
-# Lockbox browser extension
+# Credlet browser extension
 
 This client connects directly to the single-user Vaultwarden service. Builds target Chrome (Manifest V3) and Firefox on desktop and Android (Manifest V2 with `gecko_android`, minimum Firefox 142).
 
@@ -17,11 +17,11 @@ npm run build
 python3 tools/package-extension.py
 ```
 
-In desktop Firefox, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `extension/dist/firefox/manifest.json`. Temporary installations last until Firefox exits. The same files are packaged as `extension/dist/lockbox-firefox-0.1.0.xpi`.
+In desktop Firefox, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `extension/dist/firefox/manifest.json`. Temporary installations last until Firefox exits. The same files are packaged as `extension/dist/credlet-firefox-0.2.0.xpi`.
 
 In Chrome, open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked**, and select `extension/dist/chrome`. The ZIP artifact can be used as an upload package. Store signing/distribution has not been performed.
 
-Packaging also creates `extension/dist/lockbox-extension-source-0.1.0.zip`, adjacent SHA-256 files and `release.json`. A clean source rebuild passed all 12 Node tests and reproduced the Firefox XPI, Chrome ZIP and source ZIP byte for byte. See [signing and distribution](../docs/extension-distribution.md) for the reviewer sources, privacy disclosure and installation steps.
+Packaging also creates `extension/dist/credlet-extension-source-0.2.0.zip`, adjacent SHA-256 files and `release.json`. A clean source rebuild passed all 17 Node tests and reproduced the Firefox XPI, Chrome ZIP and source ZIP byte for byte. See [signing and distribution](../docs/extension-distribution.md) for the reviewer sources, privacy disclosure and installation steps.
 
 For Android development, use a Firefox build that permits developer addon installation and Android remote debugging. Release Firefox requires Mozilla signing; a signed unlisted XPI can be installed from a file on Android, without a public listing. The current package is unsigned. See [Mozilla's file-installation guide](https://extensionworkshop.com/documentation/publish/install-self-distributed/). This project does not claim that a manifest declaration alone proves mobile functionality.
 
@@ -35,11 +35,11 @@ For a code field, choose **Fill code** in the login detail. The extension fills 
 
 ## Passkeys
 
-Start passkey creation or sign-in on an HTTPS site's normal account page. Lockbox opens an approval tab showing the actual requesting origin and relying-party ID. Unlock the vault if necessary, select an account for sign-in, then enter the master password and approve. Every operation verifies the master password afresh. The page receives registration public data or a signed assertion; the private key stays encrypted in the vault and is decrypted only inside the extension background process.
+Start passkey creation or sign-in on an HTTPS site's normal account page. Credlet opens an approval tab showing the actual requesting origin and relying-party ID. Unlock the vault if necessary, select an account for sign-in, then enter the master password and approve. Every operation verifies the master password afresh. The page receives registration public data or a signed assertion; the private key stays encrypted in the vault and is decrypted only inside the extension background process.
 
 The current provider supports ES256/P-256, discoverable and allow-list credentials, and synchronizable passkeys with a zero signature counter. It verifies the RP ID against the browser-authenticated sender origin and the public suffix list, including private suffixes. Requests must originate in the active top-level page. Navigating away, aborting, closing approval or timing out cancels the request. Maximum approval time is two minutes.
 
-Choose **Use device instead** to invoke the browser's original authenticator. Unsupported public-key algorithms, external authenticators and direct/enterprise attestation also use the native path. Conditional mediation uses the native browser implementation; Lockbox currently uses explicit approval tabs. Cross-origin frames and advanced extensions such as PRF are not implemented by this provider. Lockbox's provider passed real Android Firefox registration/assertion; native Android fallback and broader third-party website compatibility still need acceptance testing.
+Choose **Use device instead** to invoke the browser's original authenticator. Unsupported public-key algorithms, external authenticators and direct/enterprise attestation also use the native path. Conditional mediation uses the native browser implementation; Credlet currently uses explicit approval tabs. Cross-origin frames and advanced extensions such as PRF are not implemented by this provider. Credlet's provider passed real Android Firefox registration/assertion; native Android fallback and broader third-party website compatibility still need acceptance testing.
 
 Only individual logins are shown. Organization items and deleted items are excluded. Items configured to require a master-password re-prompt must be managed using the web vault. Other vault login two-factor methods, offline unlock and automatic save prompts remain to be added. Official clients remain available for those vault-management features while implementation continues.
 
@@ -54,3 +54,9 @@ With `--geckodriver /path/to/geckodriver`, the same test installs the actual bui
 For Chrome for Testing, use `--chromedriver /path/to/chromedriver --chrome /path/to/chrome` instead. The test exercises both browsers' real credential API, wrong-password rejection, cancellation and AbortSignal handling. An independent relying-party verifier checks attestation data, origin, challenge, RP ID hash, user-verification flags, public key and assertion signature. Chrome also exercises **Use device instead** against a WebDriver CTAP2 virtual authenticator. The full integration checks that another freshly unlocked client can sign using the synchronized passkey, the official CLI can decrypt its record, and backup recovery preserves it.
 
 Dependencies are pinned in the root lockfile. Bundles include the licenses for hash-wasm, tldts and tldts-core; Web Crypto supplies AES-CBC, HMAC and PBKDF2. hash-wasm supplies Argon2id. No runtime script or WASM is fetched from a CDN.
+
+## Credlet 0.2.0 interface
+
+Matching logins appear first, and search includes website addresses. Login details include explicit username/password/code copy controls, a code countdown, and encrypted notes. The editor preserves other app links and saved exact/prefix/never-match rules when the website is unchanged. Website addresses are optional for native-app-only logins. Use the arrow in the header to open a larger tab.
+
+Copied values remain in the system clipboard after the vault locks. Passkey requests can be cancelled or handed to the device provider while Credlet is locked. See [upgrading](../docs/upgrading.md) for existing installations.

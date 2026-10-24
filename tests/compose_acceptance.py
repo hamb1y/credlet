@@ -22,8 +22,8 @@ import urllib.request
 ROOT=Path(__file__).resolve().parents[1]
 ARTIFACT=ROOT/'.tools/compose-acceptance'
 VM=ROOT/'.tools/linux-vm'
-STATE='/srv/lockbox-test/state'
-MANAGER='/srv/lockbox-test/lockbox.py'
+STATE='/srv/credlet-test/state'
+MANAGER='/srv/credlet-test/credlet.py'
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
         if check and result.returncode:raise RuntimeError('VM command failed: '+result.stderr)
         return result
 
-    if remote('cat /srv/lockbox-test/.disposable').stdout.strip()!='lockbox-disposable-linux-vm' or remote('cat /sys/class/dmi/id/sys_vendor').stdout.strip()!='QEMU':
+    if remote('cat /srv/credlet-test/.disposable').stdout.strip()!='credlet-disposable-linux-vm' or remote('cat /sys/class/dmi/id/sys_vendor').stdout.strip()!='QEMU':
         raise RuntimeError('The isolated Linux VM identity check failed.')
     fixture=json.loads((ARTIFACT/'fixture.json').read_text())
     assert fixture['server']=='https://vault.localhost:18443' and fixture['email']=='owner@example.com'
@@ -77,17 +77,17 @@ def main():
     with http('/admin') as response:assert response.status==404
     with http('/identity/accounts/register/send-verification-email',{'email':'another@example.com'}) as response:
         assert response.status in (400,403)
-    containers=json.loads(remote('docker inspect lockbox-https-1 lockbox-vault-1').stdout)
-    vault=next(c for c in containers if c['Name']=='/lockbox-vault-1')
+    containers=json.loads(remote('docker inspect credlet-https-1 credlet-vault-1').stdout)
+    vault=next(c for c in containers if c['Name']=='/credlet-vault-1')
     assert not vault['HostConfig']['PortBindings'] and 'SIGNUPS_ALLOWED=false' in vault['Config']['Env']
     assert vault['HostConfig']['CapDrop']==['ALL'] and vault['HostConfig']['SecurityOpt']==['no-new-privileges:true']
     manager_check=remote('env SSL_CERT_FILE='+STATE+'/caddy-data/caddy/pki/authorities/local/root.crt python3 '+MANAGER+' --state '+STATE+' check')
     assert manager_check.returncode==0
     passed('actual Compose HTTPS/HSTS/admin denial, registration rejection, owner check and unpublished restricted backend')
 
-    recovery='/srv/lockbox-test/recovered-'+str(time.time_ns())
+    recovery='/srv/credlet-test/recovered-'+str(time.time_ns())
     try:
-        with tempfile.TemporaryDirectory(prefix='lockbox-compose-cli-') as temporary:
+        with tempfile.TemporaryDirectory(prefix='credlet-compose-cli-') as temporary:
             def cli(profile,*args,session=None,stdin=None):
                 result=subprocess.run([str(ROOT/'.tools/node_modules/.bin/bw'),*args],input=stdin,text=True,
                     capture_output=True,timeout=90,env={**env,'BITWARDENCLI_APPDATA_DIR':str(Path(temporary)/profile),
@@ -105,7 +105,7 @@ def main():
             # Only this guarded, disposable fixture vault may be reset. A prior
             # interrupted acceptance run can leave its three named test records.
             existing=json.loads(cli('a','list','items',session=sessions[0]))
-            fixture_names={'Integration fixture','Lockbox extension fixture','Container fixture — passkey-user'}
+            fixture_names={'Integration fixture','Credlet extension fixture','Container fixture — passkey-user'}
             assert all(item['name'] in fixture_names for item in existing),'Unexpected item in disposable test vault'
             for stale in existing:cli('a','delete','item',stale['id'],session=sessions[0])
             seed='GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
@@ -134,7 +134,7 @@ def main():
             scan='import pathlib,sys; marker=sys.stdin.buffer.read(); assert all(marker not in p.read_bytes() for p in pathlib.Path('+repr(STATE+'/data')+').rglob("*") if p.is_file())'
             remote('python3 -c '+shlex.quote(scan),input=fixture['itemPassword'])
             archive=manager(STATE,['backup']).splitlines()[-1]
-            assert archive.startswith(STATE+'/backups/lockbox-') and archive.endswith('.tar.gz')
+            assert archive.startswith(STATE+'/backups/credlet-') and archive.endswith('.tar.gz')
             assert remote('stat -c %a '+shlex.quote(archive)).stdout.strip()=='600'
             manager(recovery,['restore',archive]);manager(recovery,['up'])
             context=trust(recovery)
@@ -149,7 +149,7 @@ def main():
             passed('deletion sync after restoring the complete container deployment')
             manager(recovery,['down'])
             next_archive=manager(recovery,['backup']).splitlines()[-1]
-            assert next_archive.startswith(recovery+'/backups/lockbox-')
+            assert next_archive.startswith(recovery+'/backups/credlet-')
             assert remote('stat -c %a '+shlex.quote(next_archive)).stdout.strip()=='600'
             passed('restored deployment creates its next private backup through the actual CLI')
     finally:

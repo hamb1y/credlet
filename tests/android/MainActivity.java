@@ -1,4 +1,4 @@
-package org.lockbox.fixture;
+package org.credlet.fixture;
 
 import android.app.Activity;
 import android.content.ClipboardManager;
@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(24, 48, 24, 24);
         TextView title = new TextView(this);
-        title.setText("Native Lockbox acceptance fixture");
+        title.setText("Native Credlet acceptance fixture");
         layout.addView(title);
         username = field(layout, "Fixture username", InputType.TYPE_CLASS_TEXT, View.AUTOFILL_HINT_USERNAME);
         password = field(layout, "Fixture password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD, View.AUTOFILL_HINT_PASSWORD);

@@ -33,7 +33,7 @@ def private_directory(root):
         root.chmod(0o700)
         return
     script = '''$ErrorActionPreference = 'Stop'
-$path = $env:LOCKBOX_PRIVATE_DIRECTORY
+$path = $env:CREDLET_PRIVATE_DIRECTORY
 $owner = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
 $acl = New-Object System.Security.AccessControl.DirectorySecurity
 $acl.SetOwner($owner)
@@ -46,7 +46,7 @@ Set-Acl -LiteralPath $path -AclObject $acl
 '''
     powershell = Path(os.environ['SystemRoot']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
     subprocess.run([str(powershell), '-NoProfile', '-NonInteractive', '-Command', script],
-                   env={**os.environ, 'LOCKBOX_PRIVATE_DIRECTORY': str(root)}, check=True,
+                   env={**os.environ, 'CREDLET_PRIVATE_DIRECTORY': str(root)}, check=True,
                    capture_output=True, text=True)
 
 
@@ -95,6 +95,35 @@ def validate_identity(hostname, email):
         raise ValueError('A valid owner email is required.')
 
 
+def configuration(root):
+    try:
+        cfg = json.loads((root / 'config.json').read_text())
+    except FileNotFoundError as error:
+        raise ValueError('This state directory is not initialized. Run init first, or select your existing directory with --state.') from error
+    except (ValueError, UnicodeError) as error:
+        raise ValueError('The state configuration is invalid. Restore a known-good backup.') from error
+    if not isinstance(cfg, dict) or not all(isinstance(cfg.get(key), str) for key in ('hostname', 'owner')):
+        raise ValueError('The state configuration needs a hostname and owner email.')
+    validate_identity(cfg['hostname'], cfg['owner'])
+    if cfg.get('project', 'credlet') not in ('credlet', 'lockbox'):
+        raise ValueError('Unknown deployment project in the state configuration.')
+    return cfg
+
+
+def project_name(root, cfg):
+    if 'project' in cfg:
+        return cfg['project']
+    # Existing deployments keep their Compose identity so an update cannot
+    # start a second container against the same SQLite database.
+    try:
+        previous = json.loads((root / 'compose.json').read_text()).get('name')
+        if previous == 'lockbox':
+            return previous
+    except (OSError, ValueError, AttributeError):
+        pass
+    return 'credlet'
+
+
 def init(root, hostname, email):
     validate_identity(hostname, email)
     if (root / 'config.json').exists():
@@ -102,13 +131,13 @@ def init(root, hostname, email):
     private_directory(root)
     for name in ('data', 'backups', 'caddy-data', 'caddy-config'):
         (root / name).mkdir(mode=0o700, exist_ok=True)
-    write_json(root / 'config.json', {'hostname': hostname, 'owner': email.lower()})
+    write_json(root / 'config.json', {'hostname': hostname, 'owner': email.lower(), 'project': 'credlet'})
     render(root)
 
 
 def render(root):
-    cfg = json.loads((root / 'config.json').read_text())
-    validate_identity(cfg['hostname'], cfg['owner'])
+    cfg = configuration(root)
+    project = project_name(root, cfg)
     base = {
         'image': VW_IMAGE, 'restart': 'unless-stopped',
         'volumes': [bind(root / 'data', '/data')],
@@ -125,12 +154,12 @@ def render(root):
             bind(root / 'caddy-data', '/data'), bind(root / 'caddy-config', '/config')],
         'depends_on': {'vault': {'condition': 'service_healthy'}},
         'security_opt': ['no-new-privileges:true']}}
-    write_json(root / 'compose.json', {'name': 'lockbox', 'services': services})
+    write_json(root / 'compose.json', {'name': project, 'services': services})
     bootstrap = json.loads(json.dumps(base))
     bootstrap['restart'] = 'no'
     bootstrap['ports'] = ['127.0.0.1:8222:8080']
     bootstrap['environment'].update(DOMAIN='http://localhost:8222', SIGNUPS_ALLOWED='true')
-    write_json(root / 'enroll.json', {'name': 'lockbox-enroll', 'services': {'vault': bootstrap}})
+    write_json(root / 'enroll.json', {'name': project + '-enroll', 'services': {'vault': bootstrap}})
     (root / 'Caddyfile').write_text(f'''{cfg['hostname']} {{
     encode zstd gzip
     header Strict-Transport-Security "max-age=31536000"
@@ -155,7 +184,7 @@ def owners(root):
 
 
 def check_owner(root):
-    expected = json.loads((root / 'config.json').read_text())['owner']
+    expected = configuration(root)['owner']
     if owners(root) != [expected]:
         raise ValueError('Expected exactly one account matching the configured owner. Finish enrollment first.')
     if (root / 'data/config.json').exists():
@@ -165,18 +194,18 @@ def check_owner(root):
 def stopped(root):
     # A fresh restore has no Compose files yet. Query the fixed project labels
     # directly, including a deployment started from another state directory.
-    for project in ('lockbox-enroll', 'lockbox'):
+    for project in ('credlet-enroll', 'credlet', 'lockbox-enroll', 'lockbox'):
         running = subprocess.run(['docker', 'ps', '--quiet', '--filter',
             'label=com.docker.compose.project=' + project], check=True, text=True, capture_output=True)
         if running.stdout.strip():
-            raise ValueError('Stop both stacks before this operation (lockbox.py down).')
+            raise ValueError('Stop both stacks before this operation (credlet.py down).')
 
 
 def backup(root):
     """Caller must stop both stacks to snapshot SQLite, keys and attachments together."""
     check_owner(root)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
-    target = root / 'backups' / f'lockbox-{stamp}.tar.gz'
+    target = root / 'backups' / f'credlet-{stamp}.tar.gz'
     with contextlib.closing(sqlite3.connect((root / 'data/db.sqlite3').as_uri() + '?mode=ro', uri=True)) as conn:
         if conn.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
             raise ValueError('SQLite integrity check failed.')
@@ -204,10 +233,7 @@ def restore(root, archive_path):
                 if not parts or parts[0] not in ('data', 'config.json') or member.name.startswith('/') or '..' in parts or not (member.isfile() or member.isdir()):
                     raise ValueError('Invalid or unsafe backup member.')
             archive.extractall(stage, members=members, filter='data')
-        cfg = json.loads((stage / 'config.json').read_text())
-        if not isinstance(cfg.get('hostname'), str) or not isinstance(cfg.get('owner'), str):
-            raise ValueError('Invalid backup configuration.')
-        validate_identity(cfg['hostname'], cfg['owner'])
+        configuration(stage)
         check_owner(stage)
         with contextlib.closing(sqlite3.connect((stage / 'data/db.sqlite3').as_uri() + '?mode=ro', uri=True)) as conn:
             if conn.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
@@ -223,7 +249,7 @@ def restore(root, archive_path):
 
 
 def probe(root):
-    cfg = json.loads((root / 'config.json').read_text())
+    cfg = configuration(root)
     origin = 'https://' + cfg['hostname']
     with urllib.request.urlopen(origin + '/api/config', timeout=15) as response:
         data = json.load(response)
@@ -248,6 +274,8 @@ def main():
     private_directory(root)
     # Serialize lifecycle commands so enrollment and production never race on SQLite.
     with state_lock(root):
+        if args.command not in ('init', 'restore'):
+            configuration(root)
         if args.command == 'init':
             init(root, args.hostname, args.email)
             print('Initialized. Run enroll to create your account on localhost:8222.')

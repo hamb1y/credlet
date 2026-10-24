@@ -17,7 +17,7 @@ import platform
 import subprocess
 import sys
 
-archive = next(Path('desktop/dist').glob('lockbox-desktop-*-linux-x64.tar.gz'))
+archive = next(Path('desktop/dist').glob('credlet-desktop-*-linux-x64.tar.gz'))
 report = {
     'distribution': Path('/etc/os-release').read_text(),
     'libc': platform.libc_ver(),
@@ -33,4 +33,4 @@ report = {
 }
 Path(str(archive) + '.build.json').write_text(json.dumps(report, indent=2) + '\n')
 PY
-desktop/dist/Lockbox/Lockbox --check-runtime
+desktop/dist/Credlet/Credlet --check-runtime

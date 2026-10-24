@@ -1,5 +1,7 @@
 # Windows build and native acceptance
 
+The detailed acceptance evidence below was recorded for **Lockbox 0.1.0**, before the Credlet rename. Commands use the current Credlet names; historical archive sizes and hashes refer to the original Lockbox artifacts. See [current testing](testing.md) for checks on the renamed version.
+
 Windows x64 builds, the standalone runtime diagnostic, actual Win32 field tests,
 full source UI integration and the packaged application's actual GUI acceptance
 have passed. Runtime versions and limits are recorded in [the testing guide](testing.md).
@@ -24,20 +26,20 @@ Distribution signing and installer integration are separate work.
 Check the frozen runtime without signing into a vault:
 
 ```powershell
-desktop\dist\Lockbox\Lockbox.exe --check-runtime --report runtime-report.json
+desktop\dist\Credlet\Credlet.exe --check-runtime --report runtime-report.json
 Get-Content runtime-report.json
 ```
 
 ## Actual native fields
 
 The acceptance harness deliberately requires the disposable VM computer name
-`LOCKBOX-TEST`. Run it in that VM's interactive desktop as `lockboxtest`. A WinRM
+`CREDLET-TEST`. Run it in that VM's interactive desktop as `credlettest`. A WinRM
 process by itself runs outside the interactive desktop and cannot establish
 native application filling.
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onedir --windowed --noupx --name LockboxFixture --distpath desktop/fixture-dist --workpath desktop/fixture-build --specpath desktop/fixture-build tests/native_windows_fixture.py
-python tests/native_windows.py --fixture desktop/fixture-dist/LockboxFixture/LockboxFixture.exe --report native-report.json
+python -m PyInstaller --noconfirm --clean --onedir --windowed --noupx --name CredletFixture --distpath desktop/fixture-dist --workpath desktop/fixture-build --specpath desktop/fixture-build tests/native_windows_fixture.py
+python tests/native_windows.py --fixture desktop/fixture-dist/CredletFixture/CredletFixture.exe --report native-report.json
 ```
 
 The fixture creates real Win32 `EDIT` controls, including an `ES_PASSWORD` field,
@@ -50,13 +52,13 @@ all vault filling goes through the production adapter.
 ## Full encrypted-client integration from the Linux host
 
 The remote harness expects only the owned local VM endpoint
-`http://127.0.0.1:15985/wsman`, computer `LOCKBOX-TEST`, user `lockboxtest` and
-the marker `C:\LockboxTest\.disposable` containing
-`lockbox-disposable-windows-vm`. Source, Python and the compiled fixture must be
-under `C:\LockboxTest`; the bridge runtime comes from the Windows build above.
+`http://127.0.0.1:15985/wsman`, computer `CREDLET-TEST`, user `credlettest` and
+the marker `C:\CredletTest\.disposable` containing
+`credlet-disposable-windows-vm`. Source, Python and the compiled fixture must be
+under `C:\CredletTest`; the bridge runtime comes from the Windows build above.
 
 Create a private `0600` host JSON file with `disposable: true`, that `wsman`
-endpoint, `username: "lockboxtest"` and the disposable VM's random password. Do
+endpoint, `username: "credlettest"` and the disposable VM's random password. Do
 not put its contents in source control. Install `pywinrm==0.5.0` in a test-only
 host virtual environment and run:
 
@@ -76,7 +78,7 @@ preserved login fields. The surrounding integration run checks encrypted sync,
 authenticated WSS, backup recovery and deletion sync.
 
 The source UI run also records public widget rectangles in the guest's
-`C:\LockboxTest\acceptance\layout.json`. After that run passes, append
+`C:\CredletTest\acceptance\layout.json`. After that run passes, append
 `--windows-packaged` to the host command to drive the actual built executable
 through mouse/keyboard events on that same Windows/Tk/DPI runtime. Input is
 restricted to windows owned by that exact application process. The driver

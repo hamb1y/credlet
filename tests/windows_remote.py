@@ -25,11 +25,11 @@ class Remote:
         config = json.loads(path.read_text())
         if config.get('disposable') is not True or config.get('wsman') != 'http://127.0.0.1:15985/wsman':
             raise RuntimeError('Refusing a Windows endpoint other than the owned local test VM.')
-        if config.get('username') != 'lockboxtest': raise RuntimeError('Wrong Windows fixture user.')
+        if config.get('username') != 'credlettest': raise RuntimeError('Wrong Windows fixture user.')
         self.session = winrm.Session(config['wsman'],
             auth=(config['username'], config['password']),
             transport='ntlm', message_encryption='always', operation_timeout_sec=20, read_timeout_sec=30)
-        self.ps("if ($env:COMPUTERNAME -ne 'LOCKBOX-TEST' -or (Get-Content 'C:\\LockboxTest\\.disposable').Trim() -ne 'lockbox-disposable-windows-vm') { throw 'Wrong VM' }")
+        self.ps("if ($env:COMPUTERNAME -ne 'CREDLET-TEST' -or (Get-Content 'C:\\CredletTest\\.disposable').Trim() -ne 'credlet-disposable-windows-vm') { throw 'Wrong VM' }")
 
     def ps(self, script):
         result = self.session.run_ps("$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; " + script)
@@ -69,30 +69,30 @@ def exercise(configuration, environment, certificate, packaged=False):
     server = urlsplit(environment['TEST_SERVER'])
     if server.scheme != 'https' or server.hostname != 'localhost' or not server.port or server.port < 1024:
         raise RuntimeError('Windows acceptance requires the disposable localhost HTTPS fixture.')
-    root = r'C:\LockboxTest\acceptance'
+    root = r'C:\CredletTest\acceptance'
     remote.ps('New-Item -ItemType Directory -Force -Path ' + quote(root) + ' | Out-Null')
-    remote.ps('& icacls ' + quote(root) + " /inheritance:r /grant:r 'LOCKBOX-TEST\\lockboxtest:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null; " +
+    remote.ps('& icacls ' + quote(root) + " /inheritance:r /grant:r 'CREDLET-TEST\\credlettest:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null; " +
         'if($LASTEXITCODE -ne 0){throw "Private fixture directory ACL failed"}')
     remote.put(root + r'\ca.pem', Path(certificate).read_bytes())
-    remote.put(r'C:\LockboxTest\source\tests\native_windows.py', Path(__file__).with_name('native_windows.py').read_bytes())
+    remote.put(r'C:\CredletTest\source\tests\native_windows.py', Path(__file__).with_name('native_windows.py').read_bytes())
     if packaged:
-        remote.put(r'C:\LockboxTest\source\tests\packaged_windows.py', Path(__file__).with_name('packaged_windows.py').read_bytes())
+        remote.put(r'C:\CredletTest\source\tests\packaged_windows.py', Path(__file__).with_name('packaged_windows.py').read_bytes())
     variables = {name: environment[name] for name in ('TEST_SERVER', 'TEST_EMAIL', 'TEST_PASSWORD', 'TEST_ITEM_PASSWORD')}
     variables['NODE_EXTRA_CA_CERTS'] = root + r'\ca.pem'
     remote.put(root + r'\environment.json', json.dumps(variables).encode())
-    ui = (r'--packaged-app C:\LockboxTest\source\desktop\dist\Lockbox\Lockbox.exe --layout C:\LockboxTest\acceptance\layout.json'
-        if packaged else r'--desktop-ui --runtime-directory C:\LockboxTest\source\desktop\build\runtime')
-    command = (r'@echo off' + '\r\n' + r'cd /d C:\LockboxTest\source' + '\r\n' +
-        r'C:\LockboxTest\python\python.exe -u tests\native_windows.py --fixture C:\LockboxTest\source\desktop\fixture-dist\LockboxFixture\LockboxFixture.exe --report C:\LockboxTest\acceptance\report.json ' + ui +
-        r' --environment C:\LockboxTest\acceptance\environment.json > C:\LockboxTest\acceptance\run.log 2>&1' + '\r\n')
+    ui = (r'--packaged-app C:\CredletTest\source\desktop\dist\Credlet\Credlet.exe --layout C:\CredletTest\acceptance\layout.json'
+        if packaged else r'--desktop-ui --runtime-directory C:\CredletTest\source\desktop\build\runtime')
+    command = (r'@echo off' + '\r\n' + r'cd /d C:\CredletTest\source' + '\r\n' +
+        r'C:\CredletTest\python\python.exe -u tests\native_windows.py --fixture C:\CredletTest\source\desktop\fixture-dist\CredletFixture\CredletFixture.exe --report C:\CredletTest\acceptance\report.json ' + ui +
+        r' --environment C:\CredletTest\acceptance\environment.json > C:\CredletTest\acceptance\run.log 2>&1' + '\r\n')
     remote.put(root + r'\run.cmd', command.encode())
     port = str(server.port)
-    task = 'LockboxNativeAcceptance'
+    task = 'CredletNativeAcceptance'
     try:
         remote.ps('Start-Service iphlpsvc; & netsh interface portproxy add v4tov4 listenaddress=127.0.0.1 listenport=' + port + ' connectaddress=10.0.2.2 connectport=' + port + '; if ($LASTEXITCODE -ne 0) {throw "Port forwarding failed"}')
         remote.ps('Remove-Item ' + quote(root + r'\report.json') + ' -ErrorAction SilentlyContinue; ' +
-            "$action=New-ScheduledTaskAction -Execute 'C:\\Windows\\System32\\cmd.exe' -Argument '/d /c C:\\LockboxTest\\acceptance\\run.cmd'; " +
-            "$principal=New-ScheduledTaskPrincipal -UserId 'LOCKBOX-TEST\\lockboxtest' -LogonType Interactive -RunLevel Limited; " +
+            "$action=New-ScheduledTaskAction -Execute 'C:\\Windows\\System32\\cmd.exe' -Argument '/d /c C:\\CredletTest\\acceptance\\run.cmd'; " +
+            "$principal=New-ScheduledTaskPrincipal -UserId 'CREDLET-TEST\\credlettest' -LogonType Interactive -RunLevel Limited; " +
             '$settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 4); ' +
             'Register-ScheduledTask -TaskName ' + quote(task) + ' -Action $action -Principal $principal -Settings $settings -Force | Out-Null; ' +
             'Start-ScheduledTask -TaskName ' + quote(task))

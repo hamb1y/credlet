@@ -58,7 +58,7 @@ def status():
 
 
 def serve(image='aosp'):
-    avd='lockbox-google-apis' if image=='google-apis' else 'lockbox'
+    avd='credlet-google-apis' if image=='google-apis' else 'credlet'
     tag='google_apis' if image=='google-apis' else 'default'
     ram='3072' if image=='google-apis' else '2048'
     image_root=SDK/'system-images/android-35'/tag/'x86_64'
@@ -67,7 +67,7 @@ def serve(image='aosp'):
     for folder in ('home','user','avds/'+avd+'.avd'):(STATE/folder).mkdir(parents=True,exist_ok=True)
     data=STATE/('avds/'+avd+'.avd')
     (STATE/('avds/'+avd+'.ini')).write_text('avd.ini.encoding=UTF-8\npath='+str(data)+'\ntarget=android-35\n')
-    config={'AvdId':avd,'avd.ini.displayname':'Lockbox acceptance','hw.cpu.arch':'x86_64','abi.type':'x86_64',
+    config={'AvdId':avd,'avd.ini.displayname':'Credlet acceptance','hw.cpu.arch':'x86_64','abi.type':'x86_64',
         'hw.ramSize':ram,'hw.lcd.width':'720','hw.lcd.height':'1280','hw.lcd.density':'320','hw.keyboard':'yes',
         'hw.gpu.enabled':'yes','hw.gpu.mode':'swiftshader_indirect','disk.dataPartition.size':'4G',
         'image.sysdir.1':str(image_root),'tag.id':tag,'PlayStore.enabled':'false','fastboot.forceColdBoot':'yes'}

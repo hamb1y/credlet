@@ -13,10 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     version = json.loads((ROOT / 'package.json').read_text())['version']
-    names = [f'lockbox-chrome-{version}.zip', f'lockbox-firefox-{version}.xpi',
-             f'lockbox-extension-source-{version}.zip']
+    names = [f'credlet-chrome-{version}.zip', f'credlet-firefox-{version}.xpi',
+             f'credlet-extension-source-{version}.zip']
     npm = shutil.which('npm')
-    with tempfile.TemporaryDirectory(prefix='lockbox clean reviewer rebuild ') as temporary:
+    with tempfile.TemporaryDirectory(prefix='credlet clean reviewer rebuild ') as temporary:
         directory = Path(temporary)
         with zipfile.ZipFile(ROOT / 'extension/dist' / names[-1]) as archive:
             archive.extractall(directory)

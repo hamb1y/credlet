@@ -20,8 +20,8 @@ class MacFieldGuardTests(unittest.TestCase):
             AXUIElementIsAttributeSettable=lambda *args: (0, state['settable']),
             AXUIElementGetPid=lambda *args: (0, 123),
             AXUIElementSetAttributeValue=lambda node, name, value: writes.append(value) or 0)
-        adapter.identity = lambda pid: '/owned/LockboxFixture'
-        target = Target('fixture-uri', '/owned/LockboxFixture', 'Fixture', True, adapter, object(), 123)
+        adapter.identity = lambda pid: '/owned/CredletFixture'
+        target = Target('fixture-uri', '/owned/CredletFixture', 'Fixture', True, adapter, object(), 123)
         return state, writes, target
 
     def test_disabled_but_settable_field_is_refused(self):

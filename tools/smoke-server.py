@@ -10,8 +10,8 @@ import tempfile
 
 def main():
     source = Path(sys.argv[1]).resolve()
-    executable_name = 'lockbox-server.exe' if sys.platform == 'win32' else 'lockbox-server'
-    with tempfile.TemporaryDirectory(prefix='lockbox release smoke ') as temporary:
+    executable_name = 'credlet-server.exe' if sys.platform == 'win32' else 'credlet-server'
+    with tempfile.TemporaryDirectory(prefix='credlet release smoke ') as temporary:
         bundle = Path(temporary) / 'server bundle'
         shutil.copytree(source, bundle)
         executable = bundle / executable_name

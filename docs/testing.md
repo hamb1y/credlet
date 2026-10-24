@@ -1,5 +1,20 @@
 # Testing
 
+## Credlet 0.2.0 debug pass
+
+Verified on 2026-10-24:
+
+- 31 Python regressions and 17 JavaScript tests, including legacy settings/app links, deployment identity, exact website rules and interrupted-session locking.
+- Real Chrome 156.0.8078.47 and Firefox 158.0.1 extension UI with Argon2id, search, encrypted notes, edit/trash, copying, password/code filling, ambiguous-field rejection, passkey approval/cancellation and native fallback where supported.
+- Independent official-client decryption and sync, real Caddy HTTPS/WSS notifications, full backup recovery, recovered passkey signing and deletion sync.
+- Linux source UI and freshly frozen desktop UI against actual GTK username/password/code fields on the glibc 2.44 host. The frozen GUI runs with Python and Node removed from PATH.
+- Offline packaged sign-in/vault/search/lock layout checks at 800×760 and 660×660. The release workflow runs these on Windows and Linux.
+- Fresh server CLI packaging, state protection, paths containing spaces, byte-identical reviewer source rebuild, and zero Firefox linter errors/warnings.
+
+The earlier platform-specific acceptance reports below explicitly identify their Lockbox 0.1.0 evidence. This pass did not repeat Android device or full Windows native-field acceptance. Windows receives build/runtime/offline GUI checks in CI; macOS remains deferred.
+
+## Run the tests
+
 Standard-library manager tests and extension tests:
 
 ```sh
@@ -9,7 +24,7 @@ npm test
 npm run build
 ```
 
-The integration test runs its own disposable server and TLS proxy. It also checks interoperability with the actual Lockbox extension vault code. Add `--kdf argon2` to exercise Argon2id and `--geckodriver /path/to/geckodriver` to install the built extension and exercise its Firefox UI, including real WebAuthn requests. Use `--chromedriver /path/to/chromedriver --chrome /path/to/chrome` for Chrome for Testing instead. It creates a test account, signs in two isolated CLI profiles, checks encrypted sync and RFC 6238 TOTP, checks server files for the plaintext password, restores a full backup and verifies access with the existing client, then tests deletion sync. Browser-enabled runs also verify passkey signatures from a fresh client and after backup recovery. It never modifies real vault data or global CLI configuration.
+The integration test runs its own disposable server and TLS proxy. It also checks interoperability with the actual Credlet extension vault code. Add `--kdf argon2` to exercise Argon2id and `--geckodriver /path/to/geckodriver` to install the built extension and exercise its Firefox UI, including real WebAuthn requests. Use `--chromedriver /path/to/chromedriver --chrome /path/to/chrome` for Chrome for Testing instead. It creates a test account, signs in two isolated CLI profiles, checks encrypted sync and RFC 6238 TOTP, checks server files for the plaintext password, restores a full backup and verifies access with the existing client, then tests deletion sync. Browser-enabled runs also verify passkey signatures from a fresh client and after backup recovery. It never modifies real vault data or global CLI configuration.
 
 On Linux x86_64 with Node.js, npm and OpenSSL:
 

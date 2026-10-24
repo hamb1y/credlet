@@ -28,9 +28,9 @@ current architecture and the build includes the checksum-verified Node runtime.
 The macOS 13.5 baseline comes from the bundled Node 24 runtime's
 [official platform requirements](https://github.com/nodejs/node/blob/v24.22.1/BUILDING.md#platform-list).
 
-The output is `desktop/dist/Lockbox.app` and a
-`lockbox-desktop-0.1.0-darwin-arm64.tar.gz` or
-`lockbox-desktop-0.1.0-darwin-x64.tar.gz` archive with adjacent SHA-256.
+The output is `desktop/dist/Credlet.app` and a
+`credlet-desktop-0.1.0-darwin-arm64.tar.gz` or
+`credlet-desktop-0.1.0-darwin-x64.tar.gz` archive with adjacent SHA-256.
 The README is staged as a bundle resource before signing. The build runs
 `codesign --verify --deep --strict` before archiving; it does not append files to
 the sealed app. PyInstaller's default is ad-hoc signing, described in its
@@ -45,16 +45,16 @@ with separately installed Python/Node absent from its PATH:
 ```sh
 mkdir -p .tools/macos-test
 chmod 700 .tools/macos-test
-printf '%s\n' lockbox-disposable-macos-test > .tools/macos-test/.disposable
-env PATH=/usr/bin:/bin desktop/dist/Lockbox.app/Contents/MacOS/Lockbox \
+printf '%s\n' credlet-disposable-macos-test > .tools/macos-test/.disposable
+env PATH=/usr/bin:/bin desktop/dist/Credlet.app/Contents/MacOS/Credlet \
   --check-runtime --report .tools/macos-test/runtime-report.json
 cat .tools/macos-test/runtime-report.json
-open desktop/dist/Lockbox.app
+open desktop/dist/Credlet.app
 ```
 
 A runtime diagnostic proves that the bundled dependencies load and the vault
 starts locked. It does not prove app filling. For filling, macOS must grant
-Accessibility access to Lockbox through its normal System Settings prompt.
+Accessibility access to Credlet through its normal System Settings prompt.
 The test harness separately needs permission for its actual responsible
 Terminal/Python process. Neither the application nor tests alter TCC databases
 or approve their own permissions.
@@ -66,11 +66,11 @@ interpreter is intentionally refused by the production adapter.
 
 ```sh
 python -m PyInstaller --noconfirm --clean --onedir --windowed --noupx \
-  --name LockboxFixture --osx-bundle-identifier local.lockbox.fixture \
+  --name CredletFixture --osx-bundle-identifier local.credlet.fixture \
   --distpath desktop/fixture-dist --workpath desktop/fixture-build \
   --specpath desktop/fixture-build tests/native_macos_fixture.py
 python tests/native_macos.py \
-  --fixture desktop/fixture-dist/LockboxFixture.app \
+  --fixture desktop/fixture-dist/CredletFixture.app \
   --disposable-root .tools/macos-test \
   --report .tools/macos-test/native-report.json
 ```
@@ -125,7 +125,7 @@ python tests/integration.py \
   --bw /path/to/bw \
   --caddy /path/to/macos/caddy --kdf argon2 \
   --desktop-macos .tools/macos-test \
-  --macos-fixture desktop/fixture-dist/LockboxFixture.app
+  --macos-fixture desktop/fixture-dist/CredletFixture.app
 ```
 
 The driver keeps the dialog instruction visible and allows three minutes for
@@ -135,7 +135,7 @@ and inspected fixture values live only in the marked temporary test directory
 and are removed by normal harness cleanup.
 
 After the source UI succeeds, the official CLI must independently decrypt the
-exact `lockbox-app://macos/` URI for the fixture executable and verify the
+exact `credlet-app://macos/` URI for the fixture executable and verify the
 original login password, TOTP, website URI and notes. The integration run also
 checks authenticated WSS, full backup/recovery, the same app link through an
 existing client after recovery and deletion sync. The guarded source harness
@@ -154,7 +154,7 @@ After the native and source UI checks pass, run the same disposable integration
 command with the additional argument:
 
 ```sh
-  --macos-packaged-app desktop/dist/Lockbox.app
+  --macos-packaged-app desktop/dist/Credlet.app
 ```
 
 This selects `tests/packaged_macos.py`, uses the existing successful source

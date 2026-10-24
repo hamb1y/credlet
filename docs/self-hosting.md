@@ -1,6 +1,6 @@
 # Self-hosting and recovery
 
-Lockbox manages a single-owner Vaultwarden service behind Caddy HTTPS. The
+Credlet manages a single-owner Vaultwarden service behind Caddy HTTPS. The
 Windows/Linux **server download is a deployment/control CLI**; the services run
 in Docker's pinned Linux containers. It does not bundle a native Windows
 Vaultwarden server.
@@ -8,7 +8,7 @@ Vaultwarden server.
 ## Use a server release
 
 Download the server archive for your OS from
-[GitHub Releases](https://github.com/hamb1y/lockbox/releases/latest), verify its
+[GitHub Releases](https://github.com/hamb1y/credlet/releases/latest), verify its
 checksum, and extract the whole folder. No separate Python installation is
 required. Put it in a writable directory; default state lives beside the
 executable, in `state/`. Use `--state /absolute/path` before the command to choose
@@ -23,31 +23,31 @@ SYSTEM access; Linux state uses mode 700. Use a local filesystem supporting
 these permissions. Run commands as the same account that owns your state.
 
 DNS must resolve your hostname to the server. Allow inbound TCP 80/443 and UDP
-443. Existing services on those ports must be moved before starting Lockbox.
+443. Existing services on those ports must be moved before starting Credlet.
 Only one deployment per Docker host is supported.
 
 Linux, from the extracted directory:
 
 ```sh
-./lockbox-server init --hostname vault.your-domain.com --email you@your-domain.com
-./lockbox-server enroll
+./credlet-server init --hostname vault.your-domain.com --email you@your-domain.com
+./credlet-server enroll
 # Create the exact owner account at http://localhost:8222, then:
-./lockbox-server up
-./lockbox-server check
+./credlet-server up
+./credlet-server check
 ```
 
 Windows PowerShell, from the extracted directory:
 
 ```powershell
-.\lockbox-server.exe init --hostname vault.your-domain.com --email you@your-domain.com
-.\lockbox-server.exe enroll
+.\credlet-server.exe init --hostname vault.your-domain.com --email you@your-domain.com
+.\credlet-server.exe enroll
 # Create the exact owner account at http://localhost:8222, then:
-.\lockbox-server.exe up
-.\lockbox-server.exe check
+.\credlet-server.exe up
+.\credlet-server.exe check
 ```
 
-The remaining examples use the source command `python3 lockbox.py`. Substitute
-`./lockbox-server` on Linux or `.\lockbox-server.exe` on Windows when using a
+The remaining examples use the source command `python3 credlet.py`. Substitute
+`./credlet-server` on Linux or `.\credlet-server.exe` on Windows when using a
 release. The same commands and `--state` option apply to both.
 
 ## Install from source
@@ -55,10 +55,10 @@ release. The same commands and `--state` option apply to both.
 Requires Python 3.11.4+, Docker Engine and the Docker Compose plugin (v2.20+ or later). A DNS name must resolve to the server; TCP 80/443 and UDP 443 must reach it. Caddy obtains and renews the HTTPS certificate. Data is kept in `state/`, with no published backend port or admin console.
 
 ```sh
-git clone https://github.com/hamb1y/lockbox.git
-cd lockbox
-python3 lockbox.py init --hostname vault.your-domain.com --email you@your-domain.com
-python3 lockbox.py enroll
+git clone https://github.com/hamb1y/credlet.git
+cd credlet
+python3 credlet.py init --hostname vault.your-domain.com --email you@your-domain.com
+python3 credlet.py enroll
 ```
 
 On the server, open **http://localhost:8222**, choose **Create account**, and register the exact email supplied above. Use a master password you can retain. The deployment tool never asks for or stores it.
@@ -72,41 +72,41 @@ ssh -N -L 8222:127.0.0.1:8222 user@your-server
 Open http://localhost:8222 on that workstation. Enrollment is intentionally reachable only through server localhost; close it promptly after creating the owner.
 
 ```sh
-python3 lockbox.py up
-python3 lockbox.py check
+python3 credlet.py up
+python3 credlet.py check
 ```
 
 `up` stops enrollment, requires exactly one matching owner in the database, disables registration and invitations, and starts HTTPS. It refuses to expose a vault with extra users or a `data/config.json` override. Enrollment cannot be reopened once an account exists. `check` verifies the owner invariant, trusted HTTPS, the API and service health.
 
-Use `python3 lockbox.py status` or `python3 lockbox.py down` to inspect or stop both stacks. `--state /absolute/path` before the subcommand selects a different state location. Only one Lockbox deployment per Docker host is supported by the fixed project names and ports.
+Use `python3 credlet.py status` or `python3 credlet.py down` to inspect or stop both stacks. `--state /absolute/path` before the subcommand selects a different state location. Only one Credlet deployment per Docker host is supported by the fixed project names and ports.
 
 ## Back up and recover
 
 Stop both stacks so SQLite, attachments and signing keys are copied consistently:
 
 ```sh
-python3 lockbox.py down
-python3 lockbox.py backup
-python3 lockbox.py up
+python3 credlet.py down
+python3 credlet.py backup
+python3 credlet.py up
 ```
 
-Backups are private `state/backups/lockbox-*.tar.gz` files containing all of `data/` and the owner/hostname configuration. Vault contents remain client-encrypted; the archive also includes account metadata and server keys. The archive itself is **not encrypted**. Keep an encrypted off-host copy. TLS certificates are regenerated by Caddy and are not in these archives.
+Backups are private `state/backups/credlet-*.tar.gz` files containing all of `data/` and the owner/hostname configuration. Vault contents remain client-encrypted; the archive also includes account metadata and server keys. The archive itself is **not encrypted**. Keep an encrypted off-host copy. TLS certificates are regenerated by Caddy and are not in these archives.
 
 To restore, stop the service, preserve any existing state elsewhere, then use an empty data directory:
 
 ```sh
-python3 lockbox.py down
+python3 credlet.py down
 # Move state/data to a separate safe location if it contains existing data.
-python3 lockbox.py restore /absolute/path/to/lockbox-backup.tar.gz
-python3 lockbox.py up
-python3 lockbox.py check
+python3 credlet.py restore /absolute/path/to/credlet-backup.tar.gz
+python3 credlet.py up
+python3 credlet.py check
 ```
 
 Restore checks archive paths and member types, the owner count and SQLite integrity before installing the recovered data. It refuses to overwrite a populated data directory. The archive restores its original owner and hostname. DNS and port access must still point to the recovered server.
 
 ## Dependencies and maintenance
 
-Runtime images are pinned by multi-platform digest in `lockbox.py`: Vaultwarden 1.37.4 and Caddy 2.11.7. Review upstream release notes, back up first, change the image pins deliberately, run tests and `render`, then `up`. Reusing a tag alone does not change a digest-pinned deployment. Database migrations can require restoring the pre-upgrade backup for rollback.
+Runtime images are pinned by multi-platform digest in `credlet.py`: Vaultwarden 1.37.4 and Caddy 2.11.7. Review upstream release notes, back up first, change the image pins deliberately, run tests and `render`, then `up`. Reusing a tag alone does not change a digest-pinned deployment. Database migrations can require restoring the pre-upgrade backup for rollback.
 
 - [Vaultwarden source and releases](https://github.com/dani-garcia/vaultwarden) — AGPL-3.0; unofficial Bitwarden-compatible server.
 - [Bitwarden client source](https://github.com/bitwarden/clients) and [Android source](https://github.com/bitwarden/android) — upstream licensing applies.

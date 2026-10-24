@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Owned Cocoa text fields for real macOS Accessibility acceptance.
 
-Build as LockboxFixture.app with bundle ID local.lockbox.fixture. Private IPC
+Build as CredletFixture.app with bundle ID local.credlet.fixture. Private IPC
 only focuses, inspects and changes the availability of these fixture controls;
 it provides no command for writing a vault value.
 """
@@ -17,12 +17,12 @@ def main():
         NSBackingStoreBuffered, NSSecureTextField, NSTextField, NSWindow,
         NSWindowStyleMaskClosable, NSWindowStyleMaskTitled)
     from Foundation import NSBundle, NSObject, NSTimer
-    if NSBundle.mainBundle().bundleIdentifier() != 'local.lockbox.fixture':
+    if NSBundle.mainBundle().bundleIdentifier() != 'local.credlet.fixture':
         raise RuntimeError('Run the packaged disposable fixture, not a shared interpreter')
     root = Path(sys.argv[1]).resolve(strict=True)
     if root.stat().st_uid != os.getuid() or root.stat().st_mode & 0o077:
         raise RuntimeError('Fixture directory must be private and owned by this user')
-    if (root / '.disposable').read_text().strip() != 'lockbox-native-macos-fixture':
+    if (root / '.disposable').read_text().strip() != 'credlet-native-macos-fixture':
         raise RuntimeError('Missing fixture marker')
     os.umask(0o077)
     app = NSApplication.sharedApplication()
@@ -30,7 +30,7 @@ def main():
     window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
         ((80, 120), (460, 290)), NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
         NSBackingStoreBuffered, False)
-    window.setTitle_('Lockbox native macOS fixture')
+    window.setTitle_('Credlet native macOS fixture')
     window.setReleasedWhenClosed_(False)
     controls = {}
     for index, (name, title) in enumerate([('user', 'Fixture username'),

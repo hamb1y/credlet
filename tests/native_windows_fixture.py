@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Owned Win32 EDIT controls for real Windows UI Automation acceptance.
 
-Freeze this as LockboxFixture.exe, then launch from native_windows.py on the
+Freeze this as CredletFixture.exe, then launch from native_windows.py on the
 disposable Windows test desktop. Fixture commands never perform vault filling.
 """
 import ctypes as C
@@ -17,7 +17,7 @@ def main():
     if sys.platform != 'win32':
         raise RuntimeError('This fixture requires Windows.')
     root = Path(sys.argv[1]).resolve()
-    if (root / '.disposable').read_text().strip() != 'lockbox-native-windows-fixture':
+    if (root / '.disposable').read_text().strip() != 'credlet-native-windows-fixture':
         raise RuntimeError('Missing fixture marker.')
     user = C.WinDLL('user32', use_last_error=True)
     kernel = C.WinDLL('kernel32', use_last_error=True)
@@ -114,9 +114,9 @@ def main():
         return user.DefWindowProcW(hwnd, message, wparam, lparam)
 
     instance = kernel.GetModuleHandleW(None)
-    cls = WindowClass(0, procedure, 0, 0, instance, None, None, 6, None, 'LockboxNativeFixture')
+    cls = WindowClass(0, procedure, 0, 0, instance, None, None, 6, None, 'CredletNativeFixture')
     if not user.RegisterClassW(C.byref(cls)): raise C.WinError(C.get_last_error())
-    window = user.CreateWindowExW(0, cls.name, 'Lockbox native Windows fixture',
+    window = user.CreateWindowExW(0, cls.name, 'Credlet native Windows fixture',
         0xCF0000, 760, 80, 460, 290, None, None, instance, None)
     if not window: raise C.WinError(C.get_last_error())
     for index, (name, label) in enumerate([('user', 'Fixture username'),

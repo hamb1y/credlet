@@ -27,8 +27,8 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer unus
     g_free(line);return TRUE;
 }
 int main(int argc, char **argv) {
-    gtk_init(&argc,&argv);g_set_application_name("Lockbox native fixture");
-    window=gtk_window_new(GTK_WINDOW_TOPLEVEL);gtk_window_set_title(GTK_WINDOW(window),"Lockbox native fixture");
+    gtk_init(&argc,&argv);g_set_application_name("Credlet native fixture");
+    window=gtk_window_new(GTK_WINDOW_TOPLEVEL);gtk_window_set_title(GTK_WINDOW(window),"Credlet native fixture");
     GtkWidget *box=gtk_box_new(GTK_ORIENTATION_VERTICAL,10);gtk_container_add(GTK_CONTAINER(window),box);
     username=gtk_entry_new();password=gtk_entry_new();code=gtk_entry_new();gtk_entry_set_visibility(GTK_ENTRY(password),FALSE);
     gtk_entry_set_placeholder_text(GTK_ENTRY(username),"Username");gtk_entry_set_placeholder_text(GTK_ENTRY(password),"Password");gtk_entry_set_placeholder_text(GTK_ENTRY(code),"Authenticator code");

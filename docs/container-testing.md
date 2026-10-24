@@ -1,9 +1,11 @@
 # Container acceptance in an isolated Linux VM
 
+The detailed acceptance evidence below was recorded for **Lockbox 0.1.0**, before the Credlet rename. Commands use the current Credlet names; historical archive sizes and hashes refer to the original Lockbox artifacts. See [current testing](testing.md) for checks on the renamed version.
+
 `tests/compose_acceptance.py` exercises the generated production Compose stack,
 including HTTPS, encrypted clients, WebSockets and stopped-stack recovery. It is
 restricted to a disposable QEMU VM identified by its SSH key, pinned host key,
-QEMU system vendor and `/srv/lockbox-test/.disposable` marker. It does not use the
+QEMU system vendor and `/srv/credlet-test/.disposable` marker. It does not use the
 host Docker socket. Do not adapt its fixture-reset behavior to a real vault.
 
 The full run passed on **2026-10-23**. Its seven acceptance groups and versions
@@ -80,15 +82,15 @@ printf '%s\n' \
   'https://dl-cdn.alpinelinux.org/alpine/v3.24/community' > /etc/apk/repositories
 apk add python3 openssh e2fsprogs iptables ca-certificates
 mkfs.ext4 -q -F /dev/vda
-mkdir -p /srv/lockbox-test
-mount -t ext4 /dev/vda /srv/lockbox-test
-printf '%s\n' 'lockbox-disposable-linux-vm' > /srv/lockbox-test/.disposable
+mkdir -p /srv/credlet-test
+mount -t ext4 /dev/vda /srv/credlet-test
+printf '%s\n' 'credlet-disposable-linux-vm' > /srv/credlet-test/.disposable
 rc-service cgroups start
 printf '%s\n' '127.0.0.1 vault.localhost' >> /etc/hosts
 mkdir -p /root/.ssh /etc/ssh/sshd_config.d
 chmod 700 /root/.ssh
 printf '%s\n' 'AllowTcpForwarding local' \
-  'PermitOpen 127.0.0.1:8222 127.0.0.1:443' > /etc/ssh/sshd_config.d/lockbox-test.conf
+  'PermitOpen 127.0.0.1:8222 127.0.0.1:443' > /etc/ssh/sshd_config.d/credlet-test.conf
 ```
 
 On the host, create `.tools/linux-vm/id_ed25519` using `ssh-keygen -t ed25519`
@@ -105,11 +107,11 @@ Install Docker's official static Linux x86_64 binaries inside the guest's
 the versions above. Start the foreground guest daemon with:
 
 ```sh
-dockerd --data-root /srv/lockbox-test/docker \
-  --pidfile /run/lockbox-docker.pid --log-level warn
+dockerd --data-root /srv/credlet-test/docker \
+  --pidfile /run/credlet-docker.pid --log-level warn
 ```
 
-Copy the project's `lockbox.py` to `/srv/lockbox-test/lockbox.py` in the guest.
+Copy the project's `credlet.py` to `/srv/credlet-test/credlet.py` in the guest.
 The ISO boots into RAM: its packages and SSH setup must be recreated after a
 reboot; the mounted test disk retains images, vault data and backups.
 
@@ -126,8 +128,8 @@ ssh -N -p 22993 -i .tools/linux-vm/id_ed25519 \
   -L 127.0.0.1:18443:127.0.0.1:443 root@127.0.0.1
 ```
 
-In the guest run `python3 /srv/lockbox-test/lockbox.py --state
-/srv/lockbox-test/state init --hostname vault.localhost --email owner@example.com`,
+In the guest run `python3 /srv/credlet-test/credlet.py --state
+/srv/credlet-test/state init --hostname vault.localhost --email owner@example.com`,
 then the same command prefix with `enroll`. Register that exact test email at
 host `http://127.0.0.1:18222`, using a disposable master password. Use Argon2id
 for the test account's KDF. Start production with the same prefix and `up`.

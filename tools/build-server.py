@@ -22,14 +22,14 @@ def main():
     build.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
-        '--onedir', '--noupx', '--name', 'lockbox-server', '--distpath', str(output),
+        '--onedir', '--noupx', '--name', 'credlet-server', '--distpath', str(output),
         '--workpath', str(build / 'pyinstaller'), '--specpath', str(build),
-        str(ROOT / 'lockbox.py')], cwd=ROOT, check=True)
-    folder = output / 'lockbox-server'
+        str(ROOT / 'credlet.py')], cwd=ROOT, check=True)
+    folder = output / 'credlet-server'
     bundle_licenses(folder)
     shutil.copyfile(ROOT / 'docs/self-hosting.md', folder / 'README.md')
     version = json.loads((ROOT / 'package.json').read_text())['version']
-    stem = f'lockbox-server-{version}-{system}-x64'
+    stem = f'credlet-server-{version}-{system}-x64'
     archive = Path(shutil.make_archive(str(output / stem),
         'zip' if system == 'win' else 'gztar', root_dir=output, base_dir=folder.name))
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()

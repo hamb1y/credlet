@@ -5,7 +5,7 @@ from PyInstaller.utils.hooks.gi import GiModuleInfo
 def hook(hook_api):
     module = GiModuleInfo('Atspi', '2.0')
     if not module.available:
-        raise RuntimeError('The AT-SPI 2 typelib is required to build Lockbox.')
+        raise RuntimeError('The AT-SPI 2 typelib is required to build Credlet.')
     binaries, data, imports = module.collect_typelib_data()
     hook_api.add_binaries(binaries)
     hook_api.add_datas(data)

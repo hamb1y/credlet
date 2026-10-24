@@ -25,7 +25,7 @@ def main():
     def run(command):
         subprocess.run(list(map(str, command)), check=True, env=env, capture_output=True)
 
-    with tempfile.TemporaryDirectory(prefix='lockbox-apk-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='credlet-apk-') as tmp:
         work = Path(tmp)
         classes = work / 'classes'; classes.mkdir()
         dex = work / 'dex'; dex.mkdir()
@@ -43,9 +43,9 @@ def main():
         if not keystore.exists():
             run([java/'keytool', '-genkeypair', '-keystore', keystore, '-storepass', 'fixture-only',
                  '-alias', 'fixture', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '3650',
-                 '-dname', 'CN=Disposable Lockbox acceptance'])
+                 '-dname', 'CN=Disposable Credlet acceptance'])
             keystore.chmod(0o600)
-        apk = output/'lockbox-fixture.apk'
+        apk = output/'credlet-fixture.apk'
         run([build/'apksigner', 'sign', '--ks', keystore, '--ks-pass', 'pass:fixture-only',
              '--out', apk, aligned])
         run([build/'apksigner', 'verify', apk])

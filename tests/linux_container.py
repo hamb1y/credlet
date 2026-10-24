@@ -7,13 +7,13 @@ import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = '/srv/lockbox-test/desktop-lts'
-IMAGE = 'lockbox-desktop-lts:22.04'
+SOURCE = '/srv/credlet-test/desktop-lts'
+IMAGE = 'credlet-desktop-lts:22.04'
 
 
 def ssh(command, **kwargs):
     guard = ('set -eu; '
-        'test "$(cat /srv/lockbox-test/.disposable)" = lockbox-disposable-linux-vm; '
+        'test "$(cat /srv/credlet-test/.disposable)" = credlet-disposable-linux-vm; '
         'test "$(cat /sys/class/dmi/id/sys_vendor)" = QEMU; ')
     return subprocess.run(['ssh', '-p', '22993', '-i', str(ROOT / '.tools/linux-vm/id_ed25519'),
         '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes',
@@ -34,8 +34,8 @@ def exercise(environment, certificate):
         raise RuntimeError('The disposable LTS build image is unavailable: ' + inspected.stderr)
     destination = ROOT / '.tools/linux-lts/full-ui-report.json'
     destination.unlink(missing_ok=True)
-    name = 'lockbox-lts-acceptance-' + secrets.token_hex(6)
-    command = ['docker', 'run', '--rm', '--name', name, '--label', 'local.lockbox.test=lts-acceptance',
+    name = 'credlet-lts-acceptance-' + secrets.token_hex(6)
+    command = ['docker', 'run', '--rm', '--name', name, '--label', 'local.credlet.test=lts-acceptance',
         '-i', '--network', 'host', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
         '--read-only', '--tmpfs', '/tmp:rw,exec,nosuid,nodev,size=512m',
         '--tmpfs', '/tmp/.X11-unix:rw,nosuid,nodev,mode=1777',
@@ -49,15 +49,15 @@ def exercise(environment, certificate):
         if result.returncode:
             raise RuntimeError('LTS frozen GUI acceptance failed: ' + result.stdout + result.stderr)
         lines = result.stdout.splitlines()
-        report = json.loads(next(line.removeprefix('LOCKBOX_LINUX_REPORT ')
-            for line in lines if line.startswith('LOCKBOX_LINUX_REPORT ')))
+        report = json.loads(next(line.removeprefix('CREDLET_LINUX_REPORT ')
+            for line in lines if line.startswith('CREDLET_LINUX_REPORT ')))
         if not report.get('ok'):
             raise RuntimeError('LTS frozen GUI acceptance did not pass.')
         report['imageId'] = inspected.stdout.strip()
         destination.parent.mkdir(exist_ok=True)
         destination.write_text(json.dumps(report, indent=2) + '\n')
         for line in lines:
-            if not line.startswith('LOCKBOX_LINUX_REPORT '):
+            if not line.startswith('CREDLET_LINUX_REPORT '):
                 print(line, flush=True)
         return report
     finally:

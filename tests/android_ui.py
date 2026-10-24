@@ -12,8 +12,8 @@ class AndroidUi:
         return subprocess.run(self.command+list(arguments),check=True,capture_output=True,timeout=15).stdout
 
     def nodes(self):
-        self.run('shell','uiautomator','dump','/sdcard/lockbox-acceptance-ui.xml')
-        return list(ET.fromstring(self.run('exec-out','cat','/sdcard/lockbox-acceptance-ui.xml')).iter('node'))
+        self.run('shell','uiautomator','dump','/sdcard/credlet-acceptance-ui.xml')
+        return list(ET.fromstring(self.run('exec-out','cat','/sdcard/credlet-acceptance-ui.xml')).iter('node'))
 
     def tap(self,node):
         left,top,right,bottom=map(int,re.findall(r'\d+',node.get('bounds','')))
@@ -25,7 +25,7 @@ class AndroidUi:
             nodes=self.nodes();text='\n'.join(n.get('text','') for n in nodes)
             actions=[]
             if 'Set Firefox Nightly as your default browser app?' in text:actions=['CANCEL']
-            elif 'Lockbox was added' in text:actions=['OK']
+            elif 'Credlet was added' in text:actions=['OK']
             elif 'Welcome to Firefox' in text:actions=['Continue']
             elif 'Open all your links with built-in privacy' in text:actions=['Not now']
             elif 'You’re protected' in text:actions=['Continue']

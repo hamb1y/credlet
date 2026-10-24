@@ -52,7 +52,7 @@ class Desktop:
             ('mouse_event', [W.DWORD, W.DWORD, W.DWORD, W.DWORD, C.c_size_t], None),
         ]:
             method = getattr(self.api, name); method.argtypes = args; method.restype = result
-        self.window = wait(self.find, 'Frozen Lockbox window did not appear')
+        self.window = wait(self.find, 'Frozen Credlet window did not appear')
         rect = W.RECT(); self.api.GetWindowRect(self.window, C.byref(rect))
         assert self.api.MoveWindow(self.window, 20, 20, rect.right - rect.left, rect.bottom - rect.top, True)
 
@@ -78,7 +78,7 @@ class Desktop:
 
     def find(self):
         if self.process.poll() is not None: raise AssertionError('Frozen application stopped before opening.')
-        return next((h for h in self.windows() if self.text(h) == 'Lockbox' and self.api.IsWindowVisible(h)), None)
+        return next((h for h in self.windows() if self.text(h) == 'Credlet' and self.api.IsWindowVisible(h)), None)
 
     def origin(self):
         point = W.POINT(0, 0); assert self.api.ClientToScreen(self.window, C.byref(point))
@@ -106,7 +106,7 @@ class Desktop:
         time.sleep(.08)
 
     def keys(self, events):
-        assert self.pid(self.api.GetForegroundWindow()) == self.process.pid, 'Refusing keyboard input outside frozen Lockbox.'
+        assert self.pid(self.api.GetForegroundWindow()) == self.process.pid, 'Refusing keyboard input outside frozen Credlet.'
         class Keyboard(C.Structure):
             _fields_ = [('virtual', W.WORD), ('scan', W.WORD), ('flags', W.DWORD), ('time', W.DWORD), ('extra', C.c_size_t)]
         class Mouse(C.Structure):
@@ -142,7 +142,7 @@ def exercise(executable, fixture, root, layout_path):
     signin, vault, captured = (layouts[key] for key in ('signin', 'vault', 'captured'))
     assert all(key in signin for key in ('server', 'email', 'master', 'unlock'))
     environment = {**os.environ, 'PATH': r'C:\Windows\System32;C:\Windows',
-        'LOCKBOX_CONFIG_DIR': str(root / 'frozen-settings')}
+        'CREDLET_CONFIG_DIR': str(root / 'frozen-settings')}
     for name in ('PYTHONPATH', 'PYTHONHOME', 'TCL_LIBRARY', 'TK_LIBRARY'): environment.pop(name, None)
     runtime_report = root / 'frozen-runtime.json'
     runtime = subprocess.run([str(executable), '--check-runtime', '--report', str(runtime_report)],

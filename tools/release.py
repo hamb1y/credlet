@@ -36,8 +36,8 @@ def extensions():
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
-    for filename in (f'lockbox-chrome-{VERSION}.zip', f'lockbox-extension-source-{VERSION}.zip',
-                     f'lockbox-firefox-{VERSION}.xpi'):
+    for filename in (f'credlet-chrome-{VERSION}.zip', f'credlet-extension-source-{VERSION}.zip',
+                     f'credlet-firefox-{VERSION}.xpi'):
         path = source / filename
         expected = Path(str(path) + '.sha256').read_text().split()[0]
         if digest(path) != expected:
@@ -55,7 +55,7 @@ def extensions():
                 raise ValueError('Signed extension identity/version mismatch.')
             if not {'META-INF/mozilla.rsa', 'META-INF/mozilla.sf'} <= set(archive.namelist()):
                 raise ValueError('Mozilla signature files are absent.')
-        destination = output / f'lockbox-firefox-{VERSION}-signed.xpi'
+        destination = output / f'credlet-firefox-{VERSION}-signed.xpi'
         shutil.copyfile(signed[0], destination)
         checksum(destination)
 
@@ -68,19 +68,19 @@ def native():
     system = 'win' if os.name == 'nt' else 'linux'
     suffix = 'zip' if os.name == 'nt' else 'tar.gz'
     for component in ('desktop', 'server'):
-        name = f'lockbox-{component}-{VERSION}-{system}-x64.{suffix}'
+        name = f'credlet-{component}-{VERSION}-{system}-x64.{suffix}'
         for ending in ('', '.sha256', '.build.json'):
             source = ROOT / component / 'dist' / (name + ending)
             shutil.copyfile(source, output / source.name)
 
 
 def collect(directory, output):
-    native = [f'lockbox-{component}-{VERSION}-{system}-x64.{suffix}'
+    native = [f'credlet-{component}-{VERSION}-{system}-x64.{suffix}'
         for component in ('desktop', 'server')
         for system, suffix in (('linux', 'tar.gz'), ('win', 'zip'))]
-    archives = native + [f'lockbox-chrome-{VERSION}.zip',
-        f'lockbox-firefox-{VERSION}-unsigned.xpi', f'lockbox-extension-source-{VERSION}.zip']
-    signed = f'lockbox-firefox-{VERSION}-signed.xpi'
+    archives = native + [f'credlet-chrome-{VERSION}.zip',
+        f'credlet-firefox-{VERSION}-unsigned.xpi', f'credlet-extension-source-{VERSION}.zip']
+    signed = f'credlet-firefox-{VERSION}-signed.xpi'
     if (directory / signed).exists():
         archives.append(signed)
     expected = set(archives + [name + '.sha256' for name in archives] +
@@ -115,9 +115,11 @@ def collect(directory, output):
     (output / 'SHA256SUMS').write_text(''.join(digest(path) + '  ' + path.name + '\n' for path in files))
     firefox = ('A Mozilla-signed Firefox XPI is included.' if signed in archives else
         'The Firefox XPI is unsigned: use a temporary development installation. Stable Firefox requires Mozilla signing.')
-    notes = f'''Lockbox {VERSION}
+    notes = f'''Credlet {VERSION}
 
 Self-hosted password vault tooling with Windows/Linux x64 desktop apps and server management tools, Chrome and Firefox extensions, and matching extension reviewer sources.
+
+This release renames Lockbox to Credlet, refreshes the browser and native desktop interfaces, and fixes website-rule preservation, asynchronous session locking, empty API responses, and ambiguous password-field filling. Existing native app links, Firefox identity, desktop preferences and server Compose projects remain compatible.
 
 Download the archive for your OS and keep its extracted folder together. Python and Node are bundled; the server tool requires Docker with a Linux container engine and Docker Compose v2. The vault service runs in pinned Vaultwarden/Caddy containers.
 
@@ -127,9 +129,10 @@ macOS releases are deferred. Desktop binaries are not code-signed. Chrome uses D
 
 Verify downloads with SHA256SUMS. Build metadata and a release-manifest.json accompany the archives.
 
-- [Setup and recovery](https://github.com/hamb1y/lockbox/blob/v{VERSION}/docs/self-hosting.md)
-- [Desktop usage](https://github.com/hamb1y/lockbox/blob/v{VERSION}/desktop/README.md)
-- [Extension installation](https://github.com/hamb1y/lockbox/blob/v{VERSION}/extension/README.md)
+- [Upgrading from Lockbox](https://github.com/hamb1y/credlet/blob/v{VERSION}/docs/upgrading.md)
+- [Setup and recovery](https://github.com/hamb1y/credlet/blob/v{VERSION}/docs/self-hosting.md)
+- [Desktop usage](https://github.com/hamb1y/credlet/blob/v{VERSION}/desktop/README.md)
+- [Extension installation](https://github.com/hamb1y/credlet/blob/v{VERSION}/extension/README.md)
 
 First-party code: MIT. Third-party licenses accompany each bundle.
 '''

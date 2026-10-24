@@ -8,8 +8,8 @@ import sys
 import tarfile
 import urllib.request
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-import lockbox
-root=lockbox.ROOT/'.tools';root.mkdir(exist_ok=True,mode=0o700)
+import credlet
+root=credlet.ROOT/'.tools';root.mkdir(exist_ok=True,mode=0o700)
 repo='library/caddy'
 with urllib.request.urlopen('https://auth.docker.io/token?service=registry.docker.io&scope=repository:'+repo+':pull',timeout=30) as r:
     token=json.load(r)['token']
@@ -19,7 +19,7 @@ def fetch(kind,digest):
     with urllib.request.urlopen(req,timeout=90) as r:content=r.read()
     if 'sha256:'+hashlib.sha256(content).hexdigest()!=digest:raise ValueError('OCI digest verification failed')
     return content
-index=json.loads(fetch('manifests',lockbox.CADDY_IMAGE.split('@')[1]))
+index=json.loads(fetch('manifests',credlet.CADDY_IMAGE.split('@')[1]))
 manifest=next(m['digest'] for m in index['manifests'] if m['platform'].get('architecture')=='amd64' and m['platform'].get('os')=='linux')
 image=json.loads(fetch('manifests',manifest))
 found=False

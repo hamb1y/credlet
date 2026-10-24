@@ -33,3 +33,23 @@ test('trash uses recoverable deletion and protected or missing items cannot be c
   v.rawItems=[{id:'protected',reprompt:1}];await assert.rejects(v.saveLogin({name:'overwrite'},'protected'),/cannot be edited/);
   await assert.rejects(v.saveLogin({name:'overwrite'},'missing'),/cannot be edited/);
 });
+
+test('editing a username preserves exact website rules and app links; clearing a website removes only that website',async()=>{
+  const v=new Vault();v.key=new Uint8Array(randomBytes(64));v.userId='owner';v.deadline=Date.now()+300000;
+  const addresses=[['lockbox-app://linux/%2Fopt%2Ffixture',3],['https://example.com/account?mode=login',3],['https://other.example.com/',5]];
+  const raw={id:'fixture',type:1,reprompt:0,name:await encrypt('Fixture',v.key),login:{uris:await Promise.all(addresses.map(async([uri,match])=>({uri:await encrypt(uri,v.key),match})))}};
+  v.rawItems=[raw];let body;v.request=async(path,options)=>{body=options.body;};v.sync=async()=>[];
+  await v.saveLogin({name:'Fixture',username:'changed',uri:addresses[1][0]},'fixture');
+  assert.deepEqual(body.login.uris,raw.login.uris,'Unchanged exact URI must not broaden to an origin rule');
+  await v.saveLogin({name:'Fixture',username:'changed',uri:''},'fixture');
+  assert.deepEqual(body.login.uris,[raw.login.uris[0],raw.login.uris[2]]);
+});
+test('website-free logins are supported and invalid URLs or authenticator secrets cannot be saved',async()=>{
+  const v=new Vault();v.key=new Uint8Array(randomBytes(64));v.userId='owner';v.deadline=Date.now()+300000;
+  let calls=0;v.request=async()=>{calls++;};v.sync=async()=>[];
+  await v.saveLogin({name:'Native app',username:'alice',password:'secret',uri:''});assert.equal(calls,1);
+  for(const uri of ['http://example.com','https://user:secret@example.com','not a URL']) await assert.rejects(v.saveLogin({name:'Invalid',uri}),/HTTPS/);
+  await assert.rejects(v.saveLogin({name:'Invalid',totp:'invalid0'}),/Invalid authenticator/);
+  await assert.rejects(v.saveLogin({name:'  '}),/Give the login a name/);
+  assert.equal(calls,1,'Invalid inputs must not reach the server');
+});

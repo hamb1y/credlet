@@ -1,6 +1,6 @@
 """Exercise the official Android Credential Manager provider from real Firefox WebAuthn.
 
-No Lockbox extension is installed in this temporary browser profile.
+No Credlet extension is installed in this temporary browser profile.
 """
 import base64
 import io
@@ -26,10 +26,10 @@ def ceremony(ui,driver_path,server,ca):
     # Reset that UI only on the already-verified disposable emulator before starting a new request.
     ui.run('shell','am','force-stop','com.android.credentialmanager')
     website=server.replace('//localhost:','//vault.test:')
-    with tempfile.TemporaryDirectory(prefix='lockbox-android-provider-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='credlet-android-provider-') as tmp:
         root=Path(tmp);profile=root/'profile';profile.mkdir()
         for command in (['certutil','-N','--empty-password','-d','sql:'+str(profile)],
-                        ['certutil','-A','-n','Lockbox fixture','-t','C,,','-d','sql:'+str(profile),'-i',str(ca)]):
+                        ['certutil','-A','-n','Credlet fixture','-t','C,,','-d','sql:'+str(profile),'-i',str(ca)]):
             subprocess.run(command,check=True,capture_output=True)
         archive=io.BytesIO()
         with zipfile.ZipFile(archive,'w') as bundle:
@@ -124,7 +124,7 @@ def ceremony(ui,driver_path,server,ca):
                     raise AssertionError('Native Firefox fixture is not focused and visible: '+repr(state))
                 challenge=base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip('=')
                 handle=base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip('=')
-                options={'challenge':challenge,'rp':{'id':'vault.test','name':'Lockbox native provider fixture'},
+                options={'challenge':challenge,'rp':{'id':'vault.test','name':'Credlet native provider fixture'},
                     'user':{'id':handle,'name':'passkey-user','displayName':'Native provider test'},
                     'pubKeyCredParams':[{'type':'public-key','alg':-7}],
                     'authenticatorSelection':{'residentKey':'required','userVerification':'required'},

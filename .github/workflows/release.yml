@@ -43,17 +43,17 @@ jobs:
       - name: Build Linux baseline container
         if: runner.os == 'Linux'
         run: |
-          docker build --tag lockbox-build --file desktop/linux/Dockerfile \
+          docker build --tag credlet-build --file desktop/linux/Dockerfile \
             --build-arg BUILDER_UID="$(id -u)" --build-arg BUILDER_GID="$(id -g)" .
       - name: Build and exercise Linux bundles
         if: runner.os == 'Linux'
         run: |
           docker run --rm --user "$(id -u):$(id -g)" \
             --volume "$PWD:/work" \
-            --env HOME=/tmp/lockbox-build-home \
-            --env npm_config_cache=/tmp/lockbox-npm-cache \
-            --env PYINSTALLER_CONFIG_DIR=/tmp/lockbox-pyinstaller \
-            --entrypoint sh lockbox-build tools/ci-linux.sh
+            --env HOME=/tmp/credlet-build-home \
+            --env npm_config_cache=/tmp/credlet-npm-cache \
+            --env PYINSTALLER_CONFIG_DIR=/tmp/credlet-pyinstaller \
+            --entrypoint sh credlet-build tools/ci-linux.sh
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: runner.os == 'Windows'
         with:
@@ -76,8 +76,8 @@ jobs:
       - name: Exercise frozen Windows bundles
         if: runner.os == 'Windows'
         run: |
-          python tools/smoke-server.py server/dist/lockbox-server
-          python tools/smoke-desktop.py desktop/dist/Lockbox/Lockbox.exe
+          python tools/smoke-server.py server/dist/credlet-server
+          python tools/smoke-desktop.py desktop/dist/Credlet/Credlet.exe
       - name: Stage native assets in a flat release directory
         run: python tools/release.py native
       - name: Upload native release candidates
@@ -137,7 +137,7 @@ jobs:
               --amo-base-url https://addons.mozilla.org/api/v5/ \
               --source-dir extension/dist/firefox \
               --artifacts-dir extension/dist/signed \
-              --upload-source-code "extension/dist/lockbox-extension-source-$version.zip" \
+              --upload-source-code "extension/dist/credlet-extension-source-$version.zip" \
               --amo-metadata extension/release/amo-metadata.json
             test -n "$(find extension/dist/signed -maxdepth 1 -name '*.xpi' -print -quit)"
           fi
@@ -181,5 +181,5 @@ jobs:
         run: |
           gh release create "$RELEASE_TAG" dist/release/* \
             --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
-            --title "Lockbox ${RELEASE_TAG#v}" --notes-file dist/release-notes.md
+            --title "Credlet ${RELEASE_TAG#v}" --notes-file dist/release-notes.md
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

@@ -2,7 +2,7 @@
 """Fetch isolated Linux x64 Android acceptance tools from Google's SDK repository.
 
 Upstream repository XML publishes SHA-1; pins below were read from its stable channel.
-Archives remain in .tools and are not part of Lockbox's distribution.
+Archives remain in .tools and are not part of Credlet's distribution.
 """
 from concurrent.futures import ThreadPoolExecutor
 import argparse

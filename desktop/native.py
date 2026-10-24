@@ -12,7 +12,12 @@ class NativeError(RuntimeError):
 
 
 def app_uri(platform, identity):
-    return 'lockbox-app://' + platform + '/' + quote(identity, safe='')
+    return 'credlet-app://' + platform + '/' + quote(identity, safe='')
+
+
+def canonical_app_uri(uri):
+    """Keep previously linked applications usable after the display-name change."""
+    return 'credlet-app://' + uri[len('lockbox-app://'):] if uri.startswith('lockbox-app://') else uri
 
 
 @dataclass
@@ -231,7 +236,7 @@ class Mac:
     def capture(self):
         A = self.api
         if not A.AXIsProcessTrustedWithOptions({A.kAXTrustedCheckOptionPrompt: True}):
-            raise NativeError('Enable Lockbox in System Settings → Privacy & Security → Accessibility, then capture again.')
+            raise NativeError('Enable Credlet in System Settings → Privacy & Security → Accessibility, then capture again.')
         node = self.value(A.AXUIElementCreateSystemWide(), A.kAXFocusedUIElementAttribute)
         error, pid = A.AXUIElementGetPid(node, None)
         if error or pid == os.getpid(): raise NativeError('Focus a field in the application you want to fill.')

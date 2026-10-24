@@ -3,6 +3,7 @@ import importlib.metadata
 from pathlib import Path
 import shutil
 import sys
+import sysconfig
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -12,7 +13,7 @@ def bundle_licenses(folder):
         shutil.copyfile(ROOT / name, folder / name)
     output = folder / 'third-party-licenses'
     output.mkdir(exist_ok=True)
-    python_licenses = [Path(sys.base_prefix) / 'LICENSE.txt']
+    python_licenses = [Path(sys.base_prefix) / 'LICENSE.txt', Path(sysconfig.get_path('stdlib')) / 'LICENSE.txt']
     if sys.platform == 'linux':
         # Debian copyright documents include full license texts, including those
         # for the dynamically linked GUI libraries collected by PyInstaller.

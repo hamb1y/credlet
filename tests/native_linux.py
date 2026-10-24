@@ -16,12 +16,12 @@ from desktop.native import Linux,NativeError
 
 
 def main():
-    if not os.environ.get('LOCKBOX_NATIVE_TEST_BUS'):
-        env={**os.environ,'LOCKBOX_NATIVE_TEST_BUS':'1','NO_AT_BRIDGE':'0','GTK_MODULES':'gail:atk-bridge','GNOME_ACCESSIBILITY':'1','GDK_BACKEND':'x11','WAYLAND_DISPLAY':''}
+    if not os.environ.get('CREDLET_NATIVE_TEST_BUS'):
+        env={**os.environ,'CREDLET_NATIVE_TEST_BUS':'1','NO_AT_BRIDGE':'0','GTK_MODULES':'gail:atk-bridge','GNOME_ACCESSIBILITY':'1','GDK_BACKEND':'x11','WAYLAND_DISPLAY':''}
         result=subprocess.run(['dbus-run-session','--',sys.executable,__file__,*sys.argv[1:]],env=env)
         raise SystemExit(result.returncode)
     root_dir=Path(__file__).resolve().parents[1]
-    with tempfile.TemporaryDirectory(prefix='lockbox-native-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='credlet-native-') as tmp:
         root=Path(tmp)
         flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','--libs','gtk+-3.0','x11'],text=True))
         subprocess.run(['gcc',str(root_dir/'tests/native_fixture.c'),'-o',str(root/'fixture'),*flags],check=True,capture_output=True)
@@ -73,7 +73,7 @@ def main():
                     import base64,hashlib,hmac,struct
                     import tkinter as tk
                     from desktop.app import App
-                    os.environ['LOCKBOX_CONFIG_DIR']=str(root/'settings')
+                    os.environ['CREDLET_CONFIG_DIR']=str(root/'settings')
                     runtime=Path(sys.argv[sys.argv.index('--desktop-runtime')+1]) if '--desktop-runtime' in sys.argv else None
                     ui_root=tk.Tk();app=App(ui_root,runtime_directory=runtime)
                     def spin(predicate,message,seconds=20):
@@ -96,6 +96,7 @@ def main():
                             spin(lambda:app.target is not None,'Desktop capture failed')
                             assert app.target.pid==fixture.pid
                             app.items.selection_set(item['id'])
+                            ui_root.update()
                         capture_field('user')
                         next(b for b in app.buttons if b.cget('text')=='Fill selected field').invoke()
                         assert 'Link this login' in app.notice.get(),app.notice.get()
@@ -120,6 +121,9 @@ def main():
                         counter=int(time.time())//30;assert values[2] in [otp(counter),otp(counter-1)]
                         settings=json.loads((root/'settings/settings.json').read_text())
                         assert set(settings)=={'server','email','deviceId'}
+                        if os.environ.get('CREDLET_DESKTOP_SCREENSHOT'):
+                            screenshot=Path(os.environ['CREDLET_DESKTOP_SCREENSHOT']).resolve();screenshot.parent.mkdir(parents=True,exist_ok=True)
+                            subprocess.run(['import','-window',str(ui_root.winfo_id()),str(screenshot)],check=True,capture_output=True)
                         next(b for b in app.buttons if b.cget('text')=='Lock').invoke();spin(lambda:not app.busy and not app.state['unlocked'],'Desktop lock failed')
                         assert not app.items.get_children() and app.target is None
                         print('PASS actual desktop Tk UI: HTTPS unlock, explicit app linking, native username/password/TOTP fill, role checks, private settings and lock')

@@ -14,7 +14,7 @@ import time
 def exercise(executable,fixture_command,fixture_pid,root_dir):
     import tkinter as tk
     root=Path(root_dir)
-    environment={**os.environ,'LOCKBOX_CONFIG_DIR':str(root/'packaged-settings'),'PATH':'/nonexistent'}
+    environment={**os.environ,'CREDLET_CONFIG_DIR':str(root/'packaged-settings'),'PATH':'/nonexistent'}
     for name in ('TCL_LIBRARY','TK_LIBRARY','LD_LIBRARY_PATH','PYTHONPATH','PYTHONHOME','GI_TYPELIB_PATH'):environment.pop(name,None)
     executable=Path(executable).resolve()
     runtime=subprocess.run([str(executable),'--check-runtime'],env=environment,capture_output=True,text=True,check=True,timeout=15)

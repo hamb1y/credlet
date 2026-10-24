@@ -1,6 +1,6 @@
-# Lockbox extension source and reviewer build
+# Credlet extension source and reviewer build
 
-This archive contains the readable Lockbox extension sources, build script,
+This archive contains the readable Credlet extension sources, build script,
 dependency lockfile, deterministic packager and unit tests. It includes no vault
 state, account credentials, signing keys, test VM files or installed dependencies.
 The desktop bridge is included only because one unit regression test exercises
@@ -23,7 +23,7 @@ npm run build
 python3 tools/package-extension.py
 ```
 
-Compare `extension/dist/lockbox-firefox-0.1.0.xpi` with the **unsigned** submission
+Compare `extension/dist/credlet-firefox-0.2.0.xpi` with the **unsigned** submission
 XPI. The Chrome ZIP can be compared in the same way. Output files have fixed ZIP
 timestamps, modes and ordering. Mozilla adds signature files after submission, so
 a signed XPI is not byte-identical to the unsigned input. Versioned output names
@@ -55,8 +55,8 @@ does not download executable code or use an external KDF service.
 
 ## Functional review
 
-Lockbox requires a self-hosted Bitwarden-compatible HTTPS vault. The deployment
-manager `lockbox.py` and the project guide `SELF_HOSTING.md` are included for a
+Credlet requires a self-hosted Bitwarden-compatible HTTPS vault. The deployment
+manager `credlet.py` and the project guide `SELF_HOSTING.md` are included for a
 reviewer who wants to create a disposable single-owner Vaultwarden service.
 That optional deployment needs Docker/Compose, a reachable HTTPS hostname and
 its own temporary owner account. Do not use a real vault for review.
@@ -65,7 +65,9 @@ The extension's options page or toolbar popup accepts the server HTTPS origin,
 owner email and master password. Its main functions are login creation/editing/
 trash, explicit same-origin username/password/TOTP filling, and ES256 passkey
 registration/sign-in. Every passkey approval requires the master password afresh.
-An unsupported authenticator request can use the device provider instead.
+An unsupported authenticator request can use the device provider instead, including while the vault is locked.
+
+The `clipboardWrite` permission supports explicit **Copy** controls for usernames, passwords and codes. The extension never reads the clipboard. Icons are first-party assets; their editable SVG and pre-rendered PNG files are included in `extension/assets/`.
 
 The self-hosted server receives the owner email, derived authentication data,
 device identifier, encrypted vault records and ordinary connection metadata.

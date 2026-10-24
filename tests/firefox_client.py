@@ -35,16 +35,16 @@ def main():
     server = os.environ['TEST_SERVER']
     marker = os.environ['TEST_ITEM_PASSWORD']
     extension = Path(__file__).resolve().parents[1] / ('extension/dist/firefox' if firefox else 'extension/dist/chrome')
-    with tempfile.TemporaryDirectory(prefix='lockbox-browser-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='credlet-browser-') as tmp:
         root = Path(tmp); profile = root / 'profile'; profile.mkdir()
         for command in (['certutil','-N','--empty-password','-d','sql:'+str(profile)],
-                        ['certutil','-A','-n','Lockbox fixture','-t','C,,','-d','sql:'+str(profile),'-i',os.environ['TEST_CERT']]):
+                        ['certutil','-A','-n','Credlet fixture','-t','C,,','-d','sql:'+str(profile),'-i',os.environ['TEST_CERT']]):
             subprocess.run(command, check=True, capture_output=True)
         if not firefox:
             for db in [root/'.pki/nssdb',root/'share/pki/nssdb']:
                 db.mkdir(parents=True)
                 subprocess.run(['certutil','-N','--empty-password','-d','sql:'+str(db)],check=True,capture_output=True)
-                subprocess.run(['certutil','-A','-n','Lockbox fixture','-t','C,,','-d','sql:'+str(db),'-i',os.environ['TEST_CERT']],check=True,capture_output=True)
+                subprocess.run(['certutil','-A','-n','Credlet fixture','-t','C,,','-d','sql:'+str(db),'-i',os.environ['TEST_CERT']],check=True,capture_output=True)
         with socket.socket() as sock:
             sock.bind(('127.0.0.1',0)); port = sock.getsockname()[1]
         log = (root / 'driver.log').open('w+')
@@ -131,15 +131,29 @@ def main():
             script('for(const [id,value] of Object.entries(arguments[0])) document.getElementById(id).value=value; document.getElementById("signin").requestSubmit();',
                 {'server':server,'email':os.environ['TEST_EMAIL'],'master':os.environ['TEST_PASSWORD']})
             wait('return !document.querySelector("#vault").hidden','Extension sign-in failed')
+            script('document.querySelector("#search").value="nothing-matches-this-fixture";document.querySelector("#search").dispatchEvent(new Event("input"));')
+            assert script('return !document.querySelector("#empty").hidden && document.querySelector("#empty-title").textContent==="No logins found"')
+            click('#clear-search')
+            assert script('return document.querySelector("#search").value==="" && document.querySelector("#empty").hidden')
             choose('Integration fixture')
-            click('#fill')
-            wait('return document.querySelector("#notice").textContent.includes("does not match")','Origin mismatch was not rejected')
+            assert script('return document.querySelector("#fill").disabled'), 'Unmatched login offered autofill'
+            rejected = command('POST','/execute/async',{'script':"""
+              const done=arguments[arguments.length-1],tabId=arguments[0],api=globalThis.browser||chrome;
+              api.runtime.sendMessage({type:'status'}).then(status=>api.runtime.sendMessage({type:'fill',
+                id:status.value.items.find(i=>i.name==='Integration fixture').id,tabId})).then(result=>done({result}));
+            """,'args':[target]})
+            rejected = rejected['result']
+            assert not rejected['ok'] and 'does not match' in rejected['error'], rejected
             click('#back'); click('#add')
             script('for(const [id,value] of Object.entries(arguments[0])) document.getElementById(id).value=value; document.getElementById("editor").requestSubmit();',
-                {'name':'Browser UI fixture','uri':server,'username':'browser-user','password':marker,'totp':'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'})
+                {'name':'Browser UI fixture','uri':server+'/fixture/login','username':'browser-user','password':marker,'totp':'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ','notes':'Encrypted browser notes'})
             wait('return !document.querySelector("#vault").hidden && document.querySelector("#notice").textContent.includes("saved")','UI save failed')
             choose('Browser UI fixture')
             wait('return /^\\d{6}$/.test(document.querySelector("#otp").textContent)','TOTP not displayed')
+            assert script('return document.querySelector("#detail-notes").textContent==="Encrypted browser notes"')
+            click('#reveal');assert script('return document.querySelector("#detail-password").type==="text"')
+            click('#reveal');assert script('return document.querySelector("#detail-password").type==="password"')
+            click('#copy-password');wait('return document.querySelector("#notice").textContent==="Password copied."','Copy password failed')
             assert script("return document.documentElement.scrollWidth <= document.documentElement.clientWidth"), "Narrow UI overflows horizontally"
             if args.screenshot:
                 args.screenshot.parent.mkdir(parents=True,exist_ok=True)
@@ -164,6 +178,8 @@ def main():
             wait('return !document.querySelector("#vault").hidden','Edit did not save')
             choose('Browser UI fixture')
             assert script('return document.querySelector("#detail-username").value') == 'edited-browser-user'
+            assert script('return document.querySelector("#detail-uri").textContent') == server+'/fixture/login', 'Editing broadened a saved website path'
+            assert script('return document.querySelector("#detail-notes").textContent') == 'Encrypted browser notes'
             # Trash a separate fixture through the UI; keep the original for independent-client checks.
             click('#back');click('#add')
             script('for(const [id,value] of Object.entries(arguments[0]))document.getElementById(id).value=value;document.getElementById("editor").requestSubmit();',
@@ -183,7 +199,20 @@ def main():
             wait('return document.querySelector("#notice").textContent.includes("No visible login fields")','Cross-origin form submission was not rejected')
             command('POST','/window',{'handle':fixture_handle})
             assert script('return document.querySelector("#pass").value===""'), 'Cross-origin form received a secret'
-            # Invoke the website's public Credentials API. Lockbox must ask in its own tab.
+            # Two password fields require a focused choice; new-password fields
+            # must never receive the saved login password.
+            script('document.querySelector("form").action=location.href;const extra=document.createElement("input");extra.id="other-password";extra.type="password";document.querySelector("form").append(extra);document.activeElement.blur();')
+            command('POST','/window',{'handle':extension_handle})
+            click('#fill');wait('return document.querySelector("#notice").textContent.includes("No visible login fields")','Ambiguous password fields were not rejected')
+            command('POST','/window',{'handle':fixture_handle})
+            assert script('return document.querySelector("#pass").value==="" && document.querySelector("#other-password").value===""')
+            script('document.querySelector("#pass").autocomplete="new-password";document.querySelector("#other-password").autocomplete="current-password";')
+            command('POST','/window',{'handle':extension_handle})
+            click('#fill');wait('return document.querySelector("#notice").textContent.includes("Login filled")','Current-password field was not filled')
+            command('POST','/window',{'handle':fixture_handle})
+            assert script('return document.querySelector("#pass").value==="" && document.querySelector("#other-password").value===arguments[0]',marker), 'New-password field was overwritten'
+            script('document.querySelector("#other-password").remove();document.querySelector("#pass").autocomplete="current-password";')
+            # Invoke the website's public Credentials API. Credlet must ask in its own tab.
             command('POST','/window',{'handle':fixture_handle})
             baseline_handles=set()
             def begin_passkey(kind, options):
@@ -191,7 +220,7 @@ def main():
                 if not firefox or args.android_package:
                     command('POST','/window',{'handle':extension_handle})
                     command('POST','/execute/async',{'script':'const done=arguments[arguments.length-1];(globalThis.browser||chrome).tabs.update(arguments[0],{active:true}).then(()=>done(true));','args':[target]})
-                    command('POST','/window',{'handle':fixture_handle})
+                command('POST','/window',{'handle':fixture_handle})
                 script("""
                   window.passkeyResult=null;window.passkeyError=null;
                   const options=arguments[1],kind=arguments[0];
@@ -206,13 +235,14 @@ def main():
                 """,kind,options)
                 baseline_handles=set(command('GET','/window/handles'))
                 click('#start-passkey')
-            def approval_tab():
+            def approval_tab(locked=False):
                 for _ in range(100):
                     for h in command('GET','/window/handles'):
                         if h in baseline_handles: continue
                         command('POST','/window',{'handle':h})
                         if '?passkey=' in command('GET','/url'):
-                            wait('return !document.querySelector("#approval").hidden','Passkey approval did not load')
+                            wait('return !document.querySelector("#locked-request").hidden' if locked else
+                                'return !document.querySelector("#approval").hidden','Passkey approval did not load')
                             return h
                     time.sleep(.1)
                 command('POST','/window',{'handle':fixture_handle})
@@ -227,7 +257,7 @@ def main():
                 return script('return window.passkeyResult')
             challenge=base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip('=')
             handle=base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip('=')
-            options={'challenge':challenge,'rp':{'id':'localhost','name':'Lockbox WebAuthn fixture'},
+            options={'challenge':challenge,'rp':{'id':'localhost','name':'Credlet WebAuthn fixture'},
                 'user':{'id':handle,'name':'passkey-user','displayName':'Passkey test'},'pubKeyCredParams':[{'type':'public-key','alg':-7}],
                 'authenticatorSelection':{'residentKey':'required','userVerification':'required'},'extensions':{'credProps':True},'timeout':120000}
             begin_passkey('create',options); approval_tab()
@@ -281,6 +311,10 @@ def main():
             click('#lock')
             wait('return !document.querySelector("#signin").hidden','Lock control failed')
             assert script('return document.querySelector("#detail-password").value==="" && document.querySelector("#password").value===""')
+            begin_passkey('get',get_options);approval_tab(locked=True);click('#signin-cancel')
+            command('POST','/window',{'handle':fixture_handle})
+            wait('return !!window.passkeyError','Locked passkey request could not be cancelled')
+            assert script('return window.passkeyError.name') == 'NotAllowedError'
             print(json.dumps({'passed':True,'browser':session['capabilities']['browserVersion'],'passkeys':ceremony}))
         except Exception:
             if sid and args.screenshot:

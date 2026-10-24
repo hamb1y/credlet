@@ -42,8 +42,8 @@ def main():
     class Server(socketserver.ThreadingTCPServer):
         daemon_threads = True
 
-    executable = Path('/work/desktop/dist/Lockbox/Lockbox')
-    with tempfile.TemporaryDirectory(prefix='lockbox-lts-') as temporary:
+    executable = Path('/work/desktop/dist/Credlet/Credlet')
+    with tempfile.TemporaryDirectory(prefix='credlet-lts-') as temporary:
         root = Path(temporary)
         ca = root / 'ca.pem'
         ca.write_text(payload['certificate'])
@@ -64,7 +64,7 @@ def main():
         'passed': ['frozen runtime', 'HTTPS unlock', 'explicit encrypted app link',
             'native username/password/TOTP fill', 'private settings and lock',
             'password role, hidden/disabled/read-only-field and closed-app guards']}
-    print('LOCKBOX_LINUX_REPORT ' + json.dumps(report), flush=True)
+    print('CREDLET_LINUX_REPORT ' + json.dumps(report), flush=True)
 
 
 if __name__ == '__main__':

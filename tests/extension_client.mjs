@@ -9,8 +9,8 @@ assert(item, 'Extension must decrypt the cipher created by the official client')
 assert.equal(item.login.password, process.env.TEST_ITEM_PASSWORD);
 assert.equal(item.login.totp,'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ');
 assert.match((await totp(item.login.totp)).code,/^\d{6}$/);
-await vault.saveLogin({name:'Lockbox extension fixture',uri:'https://example.com',username:'extension-user',password:process.env.TEST_ITEM_PASSWORD,totp:item.login.totp});
-const created = vault.items.find(i=>i.name==='Lockbox extension fixture');
+await vault.saveLogin({name:'Credlet extension fixture',uri:'https://example.com',username:'extension-user',password:process.env.TEST_ITEM_PASSWORD,totp:item.login.totp});
+const created = vault.items.find(i=>i.name==='Credlet extension fixture');
 assert(created);
 const id=created.id;
 vault.lock();

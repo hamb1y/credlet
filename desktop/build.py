@@ -70,7 +70,7 @@ def main():
     # PyInstaller 6 accepts a colon on all platforms, including Windows drive paths.
     separator=':'
     command=[sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onedir','--noupx',
-        '--name','Lockbox','--paths',str(ROOT),'--distpath',str(ROOT/'desktop/dist'),
+        '--name','Credlet','--paths',str(ROOT),'--distpath',str(ROOT/'desktop/dist'),
         '--workpath',str(output/'pyinstaller'),'--specpath',str(output),'--additional-hooks-dir',str(ROOT/'desktop/hooks'),
         '--add-data',str(output/'runtime')+separator+'runtime',str(ROOT/'desktop/app.py')]
     if sys.platform=='linux':command.extend(['--hidden-import','gi.repository.Atspi','--hidden-import','gi.repository.GLib'])
@@ -79,13 +79,13 @@ def main():
     if sys.platform=='darwin':
         # Stage resources before PyInstaller seals the .app. Adding a README
         # afterward would invalidate its ad-hoc or distribution signature.
-        command.extend(['--osx-bundle-identifier','local.lockbox.desktop',
+        command.extend(['--osx-bundle-identifier','local.credlet.desktop',
             '--add-data',str(ROOT/'desktop/README.md')+separator+'.'])
     subprocess.run(command,cwd=ROOT,check=True)
     distribution=ROOT/'desktop/dist'
     version=json.loads((ROOT/'package.json').read_text())['version']
-    name=f'lockbox-desktop-{version}-{metadata["platform"]}-{metadata["architecture"]}'
-    folder=distribution/('Lockbox.app' if sys.platform=='darwin' else 'Lockbox')
+    name=f'credlet-desktop-{version}-{metadata["platform"]}-{metadata["architecture"]}'
+    folder=distribution/('Credlet.app' if sys.platform=='darwin' else 'Credlet')
     if sys.platform=='darwin':
         subprocess.run(['codesign','--verify','--deep','--strict',str(folder)],check=True)
     else:

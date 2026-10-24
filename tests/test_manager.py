@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import lockbox
+import credlet
 
 
 class ManagerTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class ManagerTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name) / 'state'
-        lockbox.init(self.root, 'vault.example.com', 'owner@example.com')
+        credlet.init(self.root, 'vault.example.com', 'owner@example.com')
 
     def account(self, *emails):
         with contextlib.closing(sqlite3.connect(self.root / 'data/db.sqlite3')) as db, db:
@@ -42,63 +42,89 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(cfg['services']['vault']['restart'], 'no')
 
     def test_owner_gate_rejects_missing_extra_or_wrong_account(self):
-        with self.assertRaises(ValueError): lockbox.check_owner(self.root)
+        with self.assertRaises(ValueError): credlet.check_owner(self.root)
         self.account('other@example.com')
-        with self.assertRaises(ValueError): lockbox.check_owner(self.root)
+        with self.assertRaises(ValueError): credlet.check_owner(self.root)
         with contextlib.closing(sqlite3.connect(self.root / 'data/db.sqlite3')) as db, db:
             db.execute("UPDATE users SET email = 'owner@example.com'")
-        lockbox.check_owner(self.root)
+        credlet.check_owner(self.root)
         with contextlib.closing(sqlite3.connect(self.root / 'data/db.sqlite3')) as db, db:
             db.execute("INSERT INTO users VALUES ('extra@example.com')")
-        with self.assertRaises(ValueError): lockbox.check_owner(self.root)
+        with self.assertRaises(ValueError): credlet.check_owner(self.root)
 
     def test_admin_override_is_rejected(self):
         self.account('owner@example.com')
         (self.root / 'data/config.json').write_text('{"signups_allowed":true}')
-        with self.assertRaises(ValueError): lockbox.check_owner(self.root)
+        with self.assertRaises(ValueError): credlet.check_owner(self.root)
 
     def test_round_trip_preserves_database_keys_and_attachments(self):
         self.account('owner@example.com')
         (self.root / 'data/rsa_key.pem').write_bytes(b'test-private-key')
         (self.root / 'data/attachments').mkdir()
         (self.root / 'data/attachments/encrypted').write_bytes(b'encrypted-attachment')
-        archive = lockbox.backup(self.root)
+        archive = credlet.backup(self.root)
         if os.name != 'nt':
             self.assertEqual(archive.stat().st_mode & 0o777, 0o600)
         target = Path(self.tmp.name) / 'restored'
         target.mkdir()
-        lockbox.restore(target, archive)
-        lockbox.check_owner(target)
+        credlet.restore(target, archive)
+        credlet.check_owner(target)
         self.assertEqual((target / 'data/rsa_key.pem').read_bytes(), b'test-private-key')
         self.assertEqual((target / 'data/attachments/encrypted').read_bytes(), b'encrypted-attachment')
         compose = json.loads((target / 'compose.json').read_text())
         self.assertEqual(compose['services']['vault']['volumes'][0],
-                         lockbox.bind(target / 'data', '/data'))
-        self.assertTrue(lockbox.backup(target).is_file())
+                         credlet.bind(target / 'data', '/data'))
+        self.assertTrue(credlet.backup(target).is_file())
         for directory in ('backups', 'caddy-data', 'caddy-config'):
             if os.name != 'nt':
                 self.assertEqual((target / directory).stat().st_mode & 0o777, 0o700)
-        with self.assertRaises(ValueError): lockbox.restore(target, archive)
+        with self.assertRaises(ValueError): credlet.restore(target, archive)
 
     def test_restore_cli_accepts_fresh_directory_without_compose_files(self):
         import subprocess
         self.account('owner@example.com')
-        archive = lockbox.backup(self.root)
+        archive = credlet.backup(self.root)
         target = Path(self.tmp.name) / 'fresh'
         original_run = subprocess.run
         def run(command, **kwargs):
             if command[0] == 'docker':
                 return subprocess.CompletedProcess(command, 0, stdout='')
             return original_run(command, **kwargs)
-        with patch('sys.argv', ['lockbox.py', '--state', str(target), 'restore', str(archive)]), \
-             patch('lockbox.subprocess.run', side_effect=run) as calls, \
+        with patch('sys.argv', ['credlet.py', '--state', str(target), 'restore', str(archive)]), \
+             patch('credlet.subprocess.run', side_effect=run) as calls, \
              contextlib.redirect_stdout(io.StringIO()):
-            lockbox.main()
-        lockbox.check_owner(target)
+            credlet.main()
+        credlet.check_owner(target)
         docker = [call for call in calls.call_args_list if call.args[0][0] == 'docker']
-        self.assertEqual(len(docker), 2)
-        for project, call in zip(('lockbox-enroll', 'lockbox'), docker):
+        self.assertEqual(len(docker), 4)
+        for project, call in zip(('credlet-enroll', 'credlet', 'lockbox-enroll', 'lockbox'), docker):
             self.assertIn('label=com.docker.compose.project=' + project, call.args[0])
+
+    def test_existing_lockbox_deployment_keeps_its_compose_identity(self):
+        path = self.root / 'config.json'
+        cfg = json.loads(path.read_text()); cfg.pop('project')
+        path.write_text(json.dumps(cfg))
+        path = self.root / 'compose.json'
+        compose = json.loads(path.read_text()); compose['name'] = 'lockbox'
+        path.write_text(json.dumps(compose))
+        credlet.render(self.root)
+        self.assertEqual(json.loads(path.read_text())['name'], 'lockbox')
+        self.assertEqual(json.loads((self.root / 'enroll.json').read_text())['name'], 'lockbox-enroll')
+
+    def test_backup_checks_legacy_stacks_as_well_as_new_stacks(self):
+        import subprocess
+        def containers(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, stdout='old-container' if command[-1].endswith('=lockbox') else '')
+        with patch('credlet.subprocess.run', side_effect=containers):
+            with self.assertRaisesRegex(ValueError, 'Stop both stacks'):
+                credlet.stopped(self.root)
+
+    def test_missing_and_malformed_configuration_have_actionable_errors(self):
+        with self.assertRaisesRegex(ValueError, 'Run init first'):
+            credlet.render(Path(self.tmp.name) / 'missing')
+        for value in ('{', '[]', '{"hostname":null,"owner":4}', '{"hostname":"vault.example.com","owner":"owner@example.com","project":"other"}'):
+            (self.root / 'config.json').write_text(value)
+            with self.assertRaises(ValueError): credlet.render(self.root)
 
     def test_unsafe_archive_cannot_escape(self):
         for name, kind in [('../outside', tarfile.REGTYPE), ('data/link', tarfile.SYMTYPE), ('/tmp/escape', tarfile.REGTYPE)]:
@@ -109,23 +135,23 @@ class ManagerTests(unittest.TestCase):
                     member.type = kind
                     if kind == tarfile.SYMTYPE: member.linkname = '/tmp'
                     archive.addfile(member, io.BytesIO(b''))
-                with self.assertRaises(ValueError): lockbox.restore(self.root, path)
+                with self.assertRaises(ValueError): credlet.restore(self.root, path)
         self.assertFalse((Path(self.tmp.name) / 'outside').exists())
 
     def test_backup_refuses_live_stack(self):
         import subprocess
-        with patch('lockbox.subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout='running-container\n')):
-            with self.assertRaises(ValueError): lockbox.stopped(self.root)
+        with patch('credlet.subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout='running-container\n')):
+            with self.assertRaises(ValueError): credlet.stopped(self.root)
 
     def test_init_preserves_existing_state(self):
         before = (self.root / 'config.json').read_bytes()
-        with self.assertRaises(ValueError): lockbox.init(self.root, 'other.example.com', 'a@example.com')
+        with self.assertRaises(ValueError): credlet.init(self.root, 'other.example.com', 'a@example.com')
         self.assertEqual(before, (self.root / 'config.json').read_bytes())
 
     def test_hostname_rejects_caddy_injection(self):
         for name in ('https://example.com', 'foo.com\nrespond 200', '../example.com', 'localhost', 'x.com:443'):
             with self.assertRaises(ValueError):
-                lockbox.init(Path(self.tmp.name) / 'invalid', name, 'a@example.com')
+                credlet.init(Path(self.tmp.name) / 'invalid', name, 'a@example.com')
 
 
 if __name__ == '__main__':

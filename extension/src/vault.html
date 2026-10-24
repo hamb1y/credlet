@@ -1,58 +1,297 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lockbox</title><link rel="stylesheet" href="vault.css"></head>
-<body>
-<header><span class="mark" aria-hidden="true">L</span><div><h1>Lockbox</h1><p>Your private vault</p></div><button id="lock" hidden>Lock</button></header>
-<main>
-<p id="notice" role="status" aria-live="polite"></p>
-<form id="signin">
-<h2>Connect to your vault</h2>
-<label>Server address<input id="server" type="url" placeholder="https://vault.example.com" required autocomplete="url"></label>
-<label>Email<input id="email" type="email" required autocomplete="username"></label>
-<label>Master password<input id="master" type="password" required autocomplete="current-password"></label>
-<label>Vault login code <span>(if enabled)</span><input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12"></label>
-<button class="primary" type="submit">Unlock vault</button>
-<p class="muted">Use the account created on your own server. The vault locks after five minutes or when its background process closes.</p>
-</form>
-<section id="vault" hidden>
-<div class="toolbar"><h2>Logins</h2><button id="sync">Sync</button><button id="add">Add login</button></div>
-<label class="search">Search<input id="search" type="search" placeholder="Name or username" autocomplete="off"></label>
-<p class="muted" id="page"></p>
-<ul id="items"></ul>
-</section>
-<section id="detail" hidden>
-<div class="row"><button id="back">← Logins</button><button id="edit">Edit</button><button id="delete">Trash</button></div><h2 id="detail-name"></h2>
-<label>Username<input id="detail-username" readonly></label>
-<label>Password<div class="row"><input id="detail-password" type="password" readonly><button id="reveal">Show</button></div></label>
-<div id="otp-panel" hidden><label>Authenticator code<output id="otp"></output></label><p class="muted" id="otp-time"></p><button id="fill-code">Fill code</button></div>
-<p id="detail-uri" class="muted"></p><button id="fill" class="primary">Fill current page</button>
-<p class="muted">Fills the matching HTTPS page after you choose a login. You submit the form.</p>
-</section>
-<section id="trash-confirm" hidden>
-<h2>Move login to trash?</h2><p id="trash-name"></p>
-<p class="muted">You can restore it from Trash in your web vault.</p>
-<div class="row"><button id="trash-cancel">Keep login</button><button id="trash-submit">Move to trash</button></div>
-</section>
-<form id="approval" hidden>
-<h2 id="approval-title">Use a passkey</h2>
-<p>Request from <strong id="approval-origin"></strong></p>
-<p class="muted">Passkey site: <span id="approval-rp"></span></p>
-<p id="approval-user"></p>
-<label id="approval-choice-label">Account<select id="approval-choice"></select></label>
-<label>Verify master password<input id="approval-password" type="password" required autocomplete="current-password"></label>
-<button id="approve" type="submit" class="primary">Approve</button>
-<div class="row"><button id="approval-cancel" type="button">Cancel</button><button id="approval-device" type="button">Use device instead</button></div>
-<p class="muted">Approve only if you started this request on this site.</p>
-</form>
-<form id="editor" hidden>
-<button id="cancel" type="button">← Logins</button><h2 id="editor-title">Save a login</h2>
-<label>Name<input id="name" required maxlength="200"></label>
-<label>Website<input id="uri" type="url" placeholder="https://example.com" required></label>
-<label>Username<input id="username" autocomplete="off"></label>
-<label>Password<div class="row"><input id="password" type="password" autocomplete="new-password"><button id="generate" type="button">Generate</button></div></label>
-<label>Authenticator secret or otpauth URI<input id="totp" autocomplete="off" spellcheck="false"></label>
-<button type="submit" class="primary">Save encrypted login</button>
-</form>
-</main><footer>Stored on your server. Unlocked on this device.</footer>
-<script src="ui.js"></script>
-</body></html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Credlet</title>
+    <link rel="stylesheet" href="vault.css" />
+  </head>
+  <body>
+    <header>
+      <img class="mark" src="icon.svg" alt="" width="42" height="44" />
+      <div class="brand">
+        <h1>Credlet</h1>
+        <p>Your credentials, together.</p>
+      </div>
+      <button
+        id="expand"
+        class="icon-button"
+        title="Open Credlet in a tab"
+        aria-label="Open Credlet in a tab"
+      >
+        ↗</button
+      ><button id="lock" hidden>Lock</button>
+    </header>
+    <main>
+      <p id="notice" role="status" aria-live="polite" tabindex="-1"></p>
+      <form id="signin">
+        <div class="intro">
+          <p class="eyebrow">YOUR PRIVATE VAULT</p>
+          <h2>A familiar place for your credentials.</h2>
+          <p class="muted">
+            Connect to your server to access your passwords, authenticator codes
+            and passkeys.
+          </p>
+        </div>
+        <label for="server">Server address</label
+        ><input
+          id="server"
+          type="url"
+          placeholder="https://vault.example.com"
+          required
+          autocomplete="url"
+          autocapitalize="none"
+          spellcheck="false"
+          aria-describedby="server-help"
+        />
+        <p class="hint" id="server-help">
+          Your self-hosted vault’s HTTPS address.
+        </p>
+        <label for="email">Email address</label
+        ><input
+          id="email"
+          type="email"
+          placeholder="you@example.com"
+          required
+          autocomplete="username"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+        <label for="master">Master password</label>
+        <div class="input-action">
+          <input
+            id="master"
+            type="password"
+            required
+            autocomplete="current-password"
+          /><button
+            id="master-reveal"
+            type="button"
+            aria-label="Show master password"
+            aria-pressed="false"
+          >
+            Show
+          </button>
+        </div>
+        <label for="code">Vault login code <span>optional</span></label
+        ><input
+          id="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="12"
+          placeholder="Only if your vault requires two-step login"
+        />
+        <button id="signin-submit" class="primary" type="submit">
+          Unlock vault <span aria-hidden="true">→</span>
+        </button>
+        <p class="security-note">
+          Your master password stays on this device. Credlet locks after five
+          minutes.
+        </p>
+        <div id="locked-request" class="row" hidden>
+          <button id="signin-cancel" type="button">Cancel request</button>
+          <button id="signin-device" type="button">Use device instead</button>
+        </div>
+      </form>
+      <section id="vault" hidden aria-labelledby="vault-title">
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">YOUR VAULT</p>
+            <h2 id="vault-title">
+              Logins <span id="item-count" class="count">0</span>
+            </h2>
+          </div>
+          <button id="sync">Sync</button
+          ><button id="add" class="accent">+ Add login</button>
+        </div>
+        <label class="sr-only" for="search">Search logins</label
+        ><input
+          id="search"
+          type="search"
+          placeholder="Search names, usernames or websites"
+          autocomplete="off"
+        />
+        <p class="page-context" id="page"></p>
+        <ul id="items" aria-label="Saved logins"></ul>
+        <div id="empty" class="empty-state" hidden>
+          <span class="empty-mark" aria-hidden="true">◇</span>
+          <h3 id="empty-title">Your vault starts here</h3>
+          <p id="empty-description">
+            Add your first login. It will be encrypted before it reaches your
+            server.
+          </p>
+          <button id="empty-add" class="accent">Add a login</button
+          ><button id="clear-search" hidden>Clear search</button>
+        </div>
+      </section>
+      <section id="detail" hidden aria-labelledby="detail-name">
+        <div class="toolbar">
+          <button id="back" class="quiet">← Logins</button
+          ><button id="edit">Edit</button
+          ><button id="delete" class="danger quiet">Trash</button>
+        </div>
+        <h2 id="detail-name" class="detail-title"></h2>
+        <label for="detail-username">Username</label>
+        <div class="input-action">
+          <input id="detail-username" readonly /><button
+            id="copy-username"
+            aria-label="Copy username"
+          >
+            Copy
+          </button>
+        </div>
+        <label for="detail-password">Password</label>
+        <div class="input-action">
+          <input id="detail-password" type="password" readonly /><button
+            id="reveal"
+            aria-label="Show password"
+            aria-pressed="false"
+          >
+            Show</button
+          ><button id="copy-password" aria-label="Copy password">Copy</button>
+        </div>
+        <div id="otp-panel" class="code-card" hidden>
+          <span class="eyebrow">AUTHENTICATOR CODE</span
+          ><output id="otp" aria-label="Current authenticator code"></output
+          ><progress
+            id="otp-progress"
+            max="30"
+            value="30"
+            aria-label="Code time remaining"
+          ></progress>
+          <div class="row">
+            <p class="hint" id="otp-time"></p>
+            <button id="copy-code">Copy code</button
+            ><button id="fill-code">Fill code</button>
+          </div>
+        </div>
+        <div id="detail-notes-panel" hidden>
+          <h3>Notes</h3>
+          <p id="detail-notes"></p>
+        </div>
+        <p id="detail-uri" class="muted"></p>
+        <button id="fill" class="primary">
+          Fill current page <span aria-hidden="true">→</span>
+        </button>
+        <p class="hint" id="fill-help">
+          Fills a matching HTTPS page. Review and submit the form yourself.
+        </p>
+      </section>
+      <section id="trash-confirm" hidden aria-labelledby="trash-title">
+        <p class="eyebrow">REMOVE LOGIN</p>
+        <h2 id="trash-title">Move login to trash?</h2>
+        <p id="trash-name" class="item-highlight"></p>
+        <p class="muted">You can restore it from Trash in your web vault.</p>
+        <div class="row">
+          <button id="trash-cancel">Keep login</button
+          ><button id="trash-submit" class="danger-solid">Move to trash</button>
+        </div>
+      </section>
+      <form id="approval" hidden>
+        <p class="eyebrow">PASSKEY REQUEST</p>
+        <h2 id="approval-title">Use a passkey</h2>
+        <div class="request-card">
+          <p>Request from <strong id="approval-origin"></strong></p>
+          <p class="muted">Passkey site: <span id="approval-rp"></span></p>
+          <p id="approval-user"></p>
+        </div>
+        <label id="approval-choice-label" for="approval-choice">Account</label
+        ><select id="approval-choice"></select>
+        <label for="approval-password">Verify master password</label
+        ><input
+          id="approval-password"
+          type="password"
+          required
+          autocomplete="current-password"
+        />
+        <button id="approve" type="submit" class="primary">Approve</button>
+        <div class="row">
+          <button id="approval-cancel" type="button">Cancel</button
+          ><button id="approval-device" type="button">
+            Use device instead
+          </button>
+        </div>
+        <p class="security-note">
+          Approve only if you started this request on this site.
+        </p>
+      </form>
+      <form id="editor" hidden>
+        <button id="cancel" class="quiet" type="button">← Logins</button>
+        <h2 id="editor-title">Save a login</h2>
+        <label for="name">Name</label
+        ><input
+          id="name"
+          required
+          maxlength="200"
+          placeholder="e.g. Personal email"
+        />
+        <label for="uri">Website <span>optional</span></label
+        ><input
+          id="uri"
+          type="url"
+          placeholder="https://example.com"
+          autocapitalize="none"
+          spellcheck="false"
+          aria-describedby="uri-help"
+        />
+        <p class="hint" id="uri-help">
+          Autofill is limited to this HTTPS site. Other saved app links are
+          kept.
+        </p>
+        <label for="username">Username</label
+        ><input
+          id="username"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+        <label for="password">Password</label>
+        <div class="input-action">
+          <input
+            id="password"
+            type="password"
+            autocomplete="new-password"
+          /><button
+            id="editor-reveal"
+            type="button"
+            aria-label="Show generated password"
+            aria-pressed="false"
+          >
+            Show</button
+          ><button id="generate" type="button">Generate</button>
+        </div>
+        <p id="generate-help" class="hint">
+          Generate a random 24-character password.
+        </p>
+        <label for="totp">Authenticator secret <span>optional</span></label
+        ><input
+          id="totp"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          aria-describedby="totp-help"
+        />
+        <p class="hint" id="totp-help">
+          Paste a setup key or an otpauth://totp URI.
+        </p>
+        <label for="notes">Notes <span>optional</span></label
+        ><textarea
+          id="notes"
+          rows="3"
+          placeholder="Anything else you want to keep encrypted"
+        ></textarea>
+        <button id="save" type="submit" class="primary">
+          Save encrypted login
+        </button>
+      </form>
+    </main>
+    <footer>
+      <span id="session-status"
+        >Encrypted on your device · Stored on your server</span
+      ><span class="footer-brand">CREDLET</span>
+    </footer>
+    <script src="ui.js"></script>
+  </body>
+</html>

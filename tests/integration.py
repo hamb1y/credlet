@@ -26,7 +26,7 @@ import urllib.error
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import lockbox
+import credlet
 
 
 def free_port():
@@ -58,8 +58,8 @@ def main():
     p.add_argument('--desktop-windows',type=Path,help='Private session.json for the owned Windows VM interactive acceptance.')
     p.add_argument('--windows-packaged',action='store_true',help='Drive the built Windows executable rather than the source UI.')
     p.add_argument('--desktop-macos',type=Path,help='Private, explicitly marked root for attended Mac UI acceptance on this Mac.')
-    p.add_argument('--macos-fixture',type=Path,help='Packaged LockboxFixture.app for --desktop-macos.')
-    p.add_argument('--macos-packaged-app',type=Path,help='Test the frozen Lockbox.app using a successful source layout from --desktop-macos.')
+    p.add_argument('--macos-fixture',type=Path,help='Packaged CredletFixture.app for --desktop-macos.')
+    p.add_argument('--macos-packaged-app',type=Path,help='Test the frozen Credlet.app using a successful source layout from --desktop-macos.')
     p.add_argument('--desktop-runtime',type=Path,help='Test the packaged Node bridge/runtime with the native UI.')
     p.add_argument('--packaged-app',type=Path,help='Drive the actual frozen desktop application against native fields.')
     p.add_argument('--kdf', choices=['pbkdf2','argon2'], default='pbkdf2')
@@ -84,9 +84,9 @@ def main():
     if args.android_package:browser_command.extend(['--android-package',args.android_package,'--android-serial',args.android_serial,'--adb',str(args.adb.resolve()),'--adb-port',str(args.adb_port)])
     if args.chromedriver: browser_command.extend(['--chromedriver',str(args.chromedriver.resolve()),'--chrome',str(args.chrome.resolve())])
     if args.browser_screenshot: browser_command.extend(['--screenshot',str(args.browser_screenshot.resolve())])
-    with tempfile.TemporaryDirectory(prefix='lockbox-integration-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='credlet-integration-') as tmp:
         root = Path(tmp)
-        lockbox.init(root / 'state', 'vault.example.com', 'owner@example.com')
+        credlet.init(root / 'state', 'vault.example.com', 'owner@example.com')
         port, tls_port = free_port(), free_port()
         server_url = f'https://localhost:{tls_port}'
         cert, key = root / 'cert.pem', root / 'key.pem'
@@ -94,7 +94,7 @@ def main():
         extensions = root / 'server.ext'
         extensions.write_text('subjectAltName=DNS:localhost,DNS:vault.test\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid,issuer\n')
         commands = [
-            ['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(ca_key),'-out',str(ca_cert),'-days','1','-subj','/CN=Lockbox test CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign','-addext','subjectKeyIdentifier=hash'],
+            ['openssl','req','-x509','-newkey','rsa:2048','-nodes','-keyout',str(ca_key),'-out',str(ca_cert),'-days','1','-subj','/CN=Credlet test CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign','-addext','subjectKeyIdentifier=hash'],
             ['openssl','req','-newkey','rsa:2048','-nodes','-keyout',str(key),'-out',str(root / 'server.csr'),'-subj','/CN=localhost'],
             ['openssl','x509','-req','-in',str(root / 'server.csr'),'-CA',str(ca_cert),'-CAkey',str(ca_key),'-CAcreateserial','-out',str(cert),'-days','1','-extfile',str(extensions)]
         ]
@@ -190,7 +190,7 @@ def main():
             result = subprocess.run(['node', str(Path(__file__).with_name('register_fixture.cjs'))],
                                     env=base_env, capture_output=True, text=True, timeout=30)
             if result.returncode: raise RuntimeError('Fixture registration failed: ' + result.stderr)
-            lockbox.check_owner(root / 'state')
+            credlet.check_owner(root / 'state')
             stop(); start(False)
             request = urllib.request.Request(server_url + '/identity/accounts/register/send-verification-email',
                 data=json.dumps({'email':'intruder@example.com'}).encode(), headers={'Content-Type':'application/json'})
@@ -225,7 +225,7 @@ def main():
             seed = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
             item = {'type':1, 'name':'Integration fixture', 'login': {'username':'test-user', 'password':marker,
                 'totp':seed, 'uris':[{'uri':'https://example.com', 'match':0}]}, 'notes':'disposable fixture'}
-            if args.android_native:item['login']['uris'].append({'uri':'androidapp://org.lockbox.fixture','match':0})
+            if args.android_native:item['login']['uris'].append({'uri':'androidapp://org.credlet.fixture','match':0})
             encoded = base64.b64encode(json.dumps(item).encode()).decode()
             created = json.loads(cli('client-a', 'create', 'item', session=sessions[0], stdin=encoded))
             ident = created['id']
@@ -247,7 +247,7 @@ def main():
             extension_id = json.loads(extension.stdout)['id']
             cli('client-b', 'sync', session=sessions[1])
             assert cli('client-b', 'get', 'password', extension_id, session=sessions[1]) == marker
-            print('PASS Lockbox extension decrypts official-client cipher and official client decrypts extension cipher', flush=True)
+            print('PASS Credlet extension decrypts official-client cipher and official client decrypts extension cipher', flush=True)
             browser_id = None
             passkey_id = None
             passkey_fixtures = []
@@ -287,7 +287,7 @@ def main():
                     print(desktop.stdout.strip(),flush=True)
                 cli('client-b','sync',session=sessions[1])
                 linked=json.loads(cli('client-b','get','item',ident,session=sessions[1]))
-                app_uris=[u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('lockbox-app://linux/')]
+                app_uris=[u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('credlet-app://linux/')]
                 assert len(app_uris)==1
                 assert linked['login']['password']==marker and linked['login']['totp']==seed
                 assert linked['login']['uris'][0]['uri']=='https://example.com' and linked['notes']=='disposable fixture'
@@ -297,7 +297,7 @@ def main():
                 exercise(args.desktop_windows, {**base_env, 'TEST_ITEM_PASSWORD': marker}, ca_cert, packaged=args.windows_packaged)
                 cli('client-b', 'sync', session=sessions[1])
                 linked = json.loads(cli('client-b', 'get', 'item', ident, session=sessions[1]))
-                app_uris = [u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('lockbox-app://windows/')]
+                app_uris = [u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('credlet-app://windows/')]
                 assert len(app_uris) == 1
                 assert linked['login']['password'] == marker and linked['login']['totp'] == seed
                 assert linked['login']['uris'][0]['uri'] == 'https://example.com' and linked['notes'] == 'disposable fixture'
@@ -336,10 +336,10 @@ def main():
                 if args.macos_packaged_app:assert result['packaged']['bundled']
                 else:assert result['packaged'] is None
                 from desktop.native import app_uri
-                expected_macos_uri = app_uri('macos', str((args.macos_fixture / 'Contents/MacOS/LockboxFixture').resolve()))
+                expected_macos_uri = app_uri('macos', str((args.macos_fixture / 'Contents/MacOS/CredletFixture').resolve()))
                 cli('client-b', 'sync', session=sessions[1])
                 linked = json.loads(cli('client-b', 'get', 'item', ident, session=sessions[1]))
-                app_uris = [u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('lockbox-app://macos/')]
+                app_uris = [u['uri'] for u in linked['login']['uris'] if u['uri'].startswith('credlet-app://macos/')]
                 assert app_uris == [expected_macos_uri]
                 assert linked['login']['password'] == marker and linked['login']['totp'] == seed
                 assert linked['login']['uris'][0]['uri'] == 'https://example.com' and linked['notes'] == 'disposable fixture'
@@ -382,9 +382,9 @@ def main():
                         secret=credential['keyValue']
                         assert secret.encode() not in content, 'Plaintext passkey leaked into server storage'
                         assert base64.urlsafe_b64decode(secret+'==') not in content, 'Private key bytes leaked into server storage'
-            archive = lockbox.backup(root / 'state')
+            archive = credlet.backup(root / 'state')
             recovery = root / 'recovered'; recovery.mkdir()
-            lockbox.restore(recovery, archive)
+            credlet.restore(recovery, archive)
             env['DATA_FOLDER'] = str(recovery / 'data')
             start(False)
             cli('client-b', 'sync', session=sessions[1])

@@ -1,4 +1,4 @@
-package org.lockbox.fixture;
+package org.credlet.fixture;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
@@ -50,7 +50,7 @@ public final class UiDump {
 
     public static void main(String[] args) throws Exception {
         Looper.prepareMainLooper();
-        HandlerThread thread = new HandlerThread("lockbox-ui-dump"); thread.start();
+        HandlerThread thread = new HandlerThread("credlet-ui-dump"); thread.start();
         Class<?> connectionType = Class.forName("android.app.IUiAutomationConnection");
         Object connection = Class.forName("android.app.UiAutomationConnection").getConstructor().newInstance();
         UiAutomation automation = (UiAutomation) UiAutomation.class

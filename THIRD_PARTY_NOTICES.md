@@ -1,6 +1,6 @@
 # Third-party software
 
-Lockbox's first-party code is MIT licensed. Dependencies retain their own
+Credlet's first-party code is MIT licensed. Dependencies retain their own
 licenses; MIT does not relicense upstream servers, clients or bundled runtimes.
 
 | Component | Use | License / source |
@@ -22,5 +22,5 @@ in `THIRD_PARTY_LICENSES.txt`. Desktop bundles include Node's combined `LICENSE`
 and the bridge's library notices under `_internal/runtime/`. Desktop and server
 archives also include `third-party-licenses/`, with Python, PyInstaller and
 available platform dependency copyright/license files. Libraries are used
-without local modifications. The matching Lockbox source and build recipes are
+without local modifications. The matching Credlet source and build recipes are
 available in the release's Git tag; upstream sources are linked above.

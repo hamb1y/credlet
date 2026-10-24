@@ -7,12 +7,15 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILT_FILES = frozenset(('manifest.json', 'background.js', 'content.js', 'ui.js',
-    'passkey-page.js', 'passkey-bridge.js', 'vault.html', 'vault.css', 'THIRD_PARTY_LICENSES.txt'))
+    'passkey-page.js', 'passkey-bridge.js', 'vault.html', 'vault.css', 'THIRD_PARTY_LICENSES.txt',
+    'icon.svg', 'icon-16.png', 'icon-32.png', 'icon-48.png', 'icon-128.png'))
 SOURCE_FILES = ('package.json', 'package-lock.json', 'extension/build.mjs',
     'LICENSE', 'THIRD_PARTY_NOTICES.md',
     'desktop/bridge.mjs', 'tests/verify_passkeys.mjs', 'tools/package-extension.py',
-    'lockbox.py', 'extension/release/README.md', 'extension/release/privacy.md',
-    'extension/release/amo-metadata.json')
+    'credlet.py', 'extension/release/README.md', 'extension/release/privacy.md',
+    'extension/release/amo-metadata.json', 'extension/assets/icon.svg',
+    'extension/assets/icon-16.png', 'extension/assets/icon-32.png',
+    'extension/assets/icon-48.png', 'extension/assets/icon-128.png')
 
 
 def regular(path):
@@ -56,7 +59,7 @@ def main():
         manifest = json.loads((directory / 'manifest.json').read_text())
         if manifest['version'] != version:
             raise RuntimeError('The built manifest version differs from package.json; rebuild first.')
-        inputs.append((output / f'lockbox-{target}-{version}.{suffix}', files))
+        inputs.append((output / f'credlet-{target}-{version}.{suffix}', files))
     sources = [(name, regular(ROOT / name)) for name in SOURCE_FILES]
     self_hosting = ROOT / 'SELF_HOSTING.md'
     if not self_hosting.exists():self_hosting = ROOT / 'docs/self-hosting.md'
@@ -67,7 +70,7 @@ def main():
                 raise RuntimeError('Symlinks are not release sources.')
             if path.is_file() and path.suffix in suffixes and not path.name.startswith('.'):
                 sources.append((path.relative_to(ROOT).as_posix(), regular(path)))
-    inputs.append((output / f'lockbox-extension-source-{version}.zip', sources))
+    inputs.append((output / f'credlet-extension-source-{version}.zip', sources))
     artifacts = [write_archive(destination, files) for destination, files in inputs]
     report = {'version': version, 'firefoxSigning': 'unsigned', 'artifacts': artifacts}
     (output / 'release.json').write_text(json.dumps(report, indent=2) + '\n')

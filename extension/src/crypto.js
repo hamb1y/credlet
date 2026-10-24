@@ -94,7 +94,7 @@ export async function totp(value, time = Date.now()) {
   const digest = await hmac(base32(secret), counter, algorithm.replace('SHA', 'SHA-'));
   const offset = digest[digest.length - 1] & 15;
   const n = new DataView(digest.buffer, digest.byteOffset + offset, 4).getUint32(0) & 0x7fffffff;
-  return {code: String(n % 10 ** digits).padStart(digits, '0'), remaining: period - Math.floor(time / 1000) % period};
+  return {code: String(n % 10 ** digits).padStart(digits, '0'), remaining: period - Math.floor(time / 1000) % period, period};
 }
 export function generatePassword(length = 24) {
   integer(length, 12, 128, 'password length');

@@ -11,9 +11,9 @@ import sys
 import tarfile
 import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import lockbox
+import credlet
 
-root = lockbox.ROOT / '.tools'
+root = credlet.ROOT / '.tools'
 root.mkdir(exist_ok=True, mode=0o700)
 repo = 'dani-garcia/vaultwarden'
 token = json.load(urllib.request.urlopen('https://ghcr.io/token?scope=repository:' + repo + ':pull'))['token']
@@ -30,7 +30,7 @@ def fetch(kind, digest):
     return content
 
 
-index = json.loads(fetch('manifests', lockbox.VW_IMAGE.split('@')[1]))
+index = json.loads(fetch('manifests', credlet.VW_IMAGE.split('@')[1]))
 manifest_digest = next(m['digest'] for m in index['manifests'] if m['platform'] == {'architecture':'amd64', 'os':'linux'})
 manifest = json.loads(fetch('manifests', manifest_digest))
 for layer in manifest['layers']:

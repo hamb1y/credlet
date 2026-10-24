@@ -58,7 +58,7 @@ class Desktop:
         self.window_id = int(visible[0][Q.kCGWindowNumber])
 
     def verify_process(self):
-        assert self.process.poll() is None, 'Frozen Lockbox process stopped'
+        assert self.process.poll() is None, 'Frozen Credlet process stopped'
         assert self.running and not self.running.isTerminated(), 'Owned Mac application is unavailable'
         url = self.running.executableURL()
         assert url and str(Path(str(url.path())).resolve(strict=True)) == self.executable, 'Owned executable identity changed'
@@ -107,8 +107,8 @@ class Desktop:
 
     def activate(self):
         self.verify_process()
-        assert self.running.activateWithOptions_(self.activation), 'Could not activate owned Lockbox'
-        wait(lambda: self.running.isActive(), 'Owned Lockbox did not become active')
+        assert self.running.activateWithOptions_(self.activation), 'Could not activate owned Credlet'
+        wait(lambda: self.running.isActive(), 'Owned Credlet did not become active')
 
     def input_ready(self):
         self.verify_process()
@@ -157,10 +157,10 @@ def exercise(bundle, fixture, root, layout_path):
     if sys.platform != 'darwin': raise RuntimeError('Packaged Mac acceptance requires an actual Mac')
     root = Path(root); bundle = Path(bundle).resolve(strict=True)
     with (bundle / 'Contents/Info.plist').open('rb') as source: metadata = plistlib.load(source)
-    assert bundle.suffix == '.app' and metadata.get('CFBundleIdentifier') == 'local.lockbox.desktop'
-    assert metadata.get('CFBundleExecutable') == 'Lockbox'
+    assert bundle.suffix == '.app' and metadata.get('CFBundleIdentifier') == 'local.credlet.desktop'
+    assert metadata.get('CFBundleExecutable') == 'Credlet'
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
-    executable = bundle / 'Contents/MacOS/Lockbox'
+    executable = bundle / 'Contents/MacOS/Credlet'
     geometry = Path(layout_path).read_bytes()
     layouts = json.loads(geometry)
     assert layouts['platform'] == 'darwin' and layouts['architecture'] == platform.machine()
@@ -170,7 +170,7 @@ def exercise(bundle, fixture, root, layout_path):
     assert source_report['ok'] and source_report['desktopUi'] and source_report['packaged'] is None
     assert source_report['layoutSha256'] == hashlib.sha256(geometry).hexdigest(), 'Geometry does not match a successful source acceptance report'
     signin, vault, captured = (layouts[key] for key in ('signin', 'vault', 'captured'))
-    environment = {**os.environ, 'PATH': '/usr/bin:/bin', 'LOCKBOX_CONFIG_DIR': str(root / 'frozen-settings')}
+    environment = {**os.environ, 'PATH': '/usr/bin:/bin', 'CREDLET_CONFIG_DIR': str(root / 'frozen-settings')}
     for name in ('PYTHONPATH', 'PYTHONHOME', 'TCL_LIBRARY', 'TK_LIBRARY', 'DYLD_LIBRARY_PATH', 'DYLD_FRAMEWORK_PATH'):
         environment.pop(name, None)
     runtime_report = root / 'frozen-runtime.json'

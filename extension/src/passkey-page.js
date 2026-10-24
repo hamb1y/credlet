@@ -12,7 +12,7 @@
   // Master-password verification supplies user verification even without OS biometrics.
   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable=async()=>true;
   const pending = new Map();
-  const send = message => window.postMessage({lockboxWebAuthn:1,...message},location.origin);
+  const send = message => window.postMessage({credletWebAuthn:1,...message},location.origin);
   function pack(pk) {
     const out = {...pk,challenge:encode(pk.challenge)};
     if (pk.user) out.user = {...pk.user,id:encode(pk.user.id)};
@@ -42,7 +42,7 @@
     return result;
   }
   window.addEventListener('message',event=>{
-    if (event.source !== window || event.origin !== location.origin || event.data?.lockboxWebAuthnResponse !== 1) return;
+    if (event.source !== window || event.origin !== location.origin || event.data?.credletWebAuthnResponse !== 1) return;
     const message=event.data, entry=pending.get(message.id);
     if (!entry) return;
     pending.delete(message.id); entry.cleanup();

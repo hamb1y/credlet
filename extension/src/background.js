@@ -17,7 +17,8 @@ async function status() {
   const settings = await api.storage.local.get(['server', 'email']);
   try { vault.requireUnlocked(); } catch { /* status also reports locked state */ }
   return {...settings, unlocked: !!vault.key, deadline: vault.deadline,
-    items: vault.items.map(({id, name, login, reprompt}) => ({id, name, username: login.username, reprompt}))};
+    items: vault.items.map(({id, name, login, reprompt}) => ({id, name, username: login.username, reprompt,
+      uris:login.uris, hasTotp:!!login.totp, hasPasskey:!!login.fido2Credentials?.length}))};
 }
 async function dispatch(message) {
   await ready;
@@ -26,6 +27,7 @@ async function dispatch(message) {
   if (message.type === 'status') return status();
   if (message.type === 'lock') { vault.lock(); await api.alarms.clear('lock'); return status(); }
   if (message.type === 'login') {
+    await api.alarms.clear('lock');
     await vault.login(message);
     await api.storage.local.set({server: vault.server, email: message.email.trim().toLowerCase()});
     await api.alarms.create('lock', {when: vault.deadline});
@@ -50,8 +52,8 @@ async function dispatch(message) {
       await api.tabs.executeScript(tab.id, {file: '/content.js', allFrames: false});
     }
     vault.requireUnlocked();
-    const payload = message.type === 'fill-code' ? {type:'lockbox-fill-code',code:(await totp(item.login.totp)).code} :
-      {type:'lockbox-fill',username:item.login.username,password:item.login.password};
+    const payload = message.type === 'fill-code' ? {type:'credlet-fill-code',code:(await totp(item.login.totp)).code} :
+      {type:'credlet-fill',username:item.login.username,password:item.login.password};
     const result = await api.tabs.sendMessage(tab.id, {...payload,origin:new URL(tab.url).origin}, {frameId:0});
     if (!result?.filled) throw Error(message.type === 'fill-code' ? 'No visible authenticator code field was found on this page.' : 'No visible login fields were found on this page.');
     return {filled: true};
@@ -67,7 +69,10 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
   if (!ownPage(sender)) return false; // Web pages and content scripts cannot query the vault.
   queue = queue.catch(() => {}).then(() => dispatch(message)).then(
     value => respond({ok: true, value}),
-    error => respond({ok: false, error: error.message, providers: error.providers}));
+    error => {
+      try { vault?.requireUnlocked(); } catch { /* include actual lock state in failures */ }
+      respond({ok: false, error: error.message, providers: error.providers, locked: !vault?.key});
+    });
   return true;
 });
 api.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'lock') vault?.lock(); });

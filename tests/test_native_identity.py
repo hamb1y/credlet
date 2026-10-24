@@ -39,7 +39,7 @@ class MacIdentityTests(unittest.TestCase):
             with self.assertRaises(NativeError): self.adapter(disguised).identity(1)
 
     def test_missing_or_relative_executable_is_rejected(self):
-        for path in (None, 'relative-fixture', '/missing-lockbox-fixture/executable'):
+        for path in (None, 'relative-fixture', '/missing-credlet-fixture/executable'):
             with self.subTest(path=path), self.assertRaises(NativeError): self.adapter(path).identity(1)
 
 
