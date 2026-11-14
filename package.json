@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "hash-wasm": "4.12.0",
-    "tldts": "7.4.19"
+    "tldts": "7.4.21"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
