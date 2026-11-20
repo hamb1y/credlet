@@ -1,3 +1,6 @@
+# Credlet/Lockbox has been archived. It will not receive future updates.
+(just use KeePassXC man)
+
 <p align="center">
   <img src="docs/assets/credlet-banner.svg" alt="Credlet — Your vault. Your server. Your devices." width="100%">
 </p>
